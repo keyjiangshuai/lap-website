@@ -1,0 +1,431 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>墨灵 · 游戏美术 AI 生产引擎</title>
+<style>
+  :root{
+    --bg:#0a0a0f;
+    --bg-2:#0f0e16;
+    --ink:#eae6df;
+    --ink-dim:#9a93a6;
+    --gold:#e8b04b;      /* 国潮金 */
+    --gold-2:#ffd98a;
+    --cyan:#39e7d6;      /* 霓虹青 */
+    --red:#e3543b;       /* 朱砂红 */
+    --line:rgba(255,255,255,.08);
+    --card:rgba(255,255,255,.03);
+    --glass:rgba(20,18,28,.6);
+    --serif:"Songti SC","STSong","Source Han Serif SC","Noto Serif SC",serif;
+    --sans:"PingFang SC","Microsoft YaHei","Helvetica Neue",sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    background:var(--bg);
+    color:var(--ink);
+    font-family:var(--sans);
+    overflow-x:hidden;
+    line-height:1.6;
+  }
+  a{color:inherit;text-decoration:none}
+  ::selection{background:var(--gold);color:#000}
+
+  /* ---------- 顶部导航 ---------- */
+  header{
+    position:fixed;top:0;left:0;right:0;z-index:100;
+    display:flex;align-items:center;justify-content:space-between;
+    padding:18px 5vw;
+    backdrop-filter:blur(14px);
+    background:linear-gradient(180deg,rgba(10,10,15,.85),rgba(10,10,15,0));
+    transition:padding .3s;
+  }
+  .logo{display:flex;align-items:center;gap:12px;font-family:var(--serif);font-size:24px;font-weight:700;letter-spacing:2px}
+  .logo .mark{
+    width:38px;height:38px;border-radius:10px;
+    background:conic-gradient(from 200deg,var(--gold),var(--red),var(--cyan),var(--gold));
+    display:grid;place-items:center;color:#0a0a0f;font-size:20px;font-weight:900;
+    box-shadow:0 0 24px rgba(232,176,75,.4);
+  }
+  nav{display:flex;gap:34px;font-size:15px;color:var(--ink-dim)}
+  nav a{position:relative;transition:color .25s}
+  nav a:hover{color:var(--ink)}
+  nav a::after{content:"";position:absolute;left:0;bottom:-6px;width:0;height:2px;background:var(--gold);transition:width .3s}
+  nav a:hover::after{width:100%}
+  .btn{
+    padding:11px 22px;border-radius:999px;font-size:14px;font-weight:600;cursor:pointer;border:none;
+    transition:transform .2s,box-shadow .3s;
+  }
+  .btn-primary{
+    background:linear-gradient(135deg,var(--gold),var(--gold-2));color:#0a0a0f;
+    box-shadow:0 8px 30px rgba(232,176,75,.35);
+  }
+  .btn-primary:hover{transform:translateY(-2px);box-shadow:0 12px 40px rgba(232,176,75,.5)}
+  .btn-ghost{background:transparent;border:1px solid var(--line);color:var(--ink)}
+  .btn-ghost:hover{border-color:var(--gold);color:var(--gold)}
+
+  /* ---------- HERO ---------- */
+  .hero{position:relative;min-height:100vh;display:flex;align-items:center;overflow:hidden}
+  #particles{position:absolute;inset:0;z-index:1}
+  .hero-flow{position:absolute;inset:0;z-index:0;opacity:.32;display:grid;grid-template-columns:repeat(6,1fr);gap:14px;transform:rotate(-8deg) scale(1.4);filter:saturate(1.1)}
+  .hero-flow .col{display:flex;flex-direction:column;gap:14px;animation:floatUp linear infinite}
+  .hero-flow .col:nth-child(odd){animation-direction:reverse}
+  .hero-flow .tile{aspect-ratio:3/4;border-radius:14px;background-size:cover;background-position:center;box-shadow:0 10px 30px rgba(0,0,0,.5)}
+  @keyframes floatUp{from{transform:translateY(0)}to{transform:translateY(-50%)}}
+  .hero::after{content:"";position:absolute;inset:0;z-index:2;background:radial-gradient(ellipse at 30% 50%,rgba(10,10,15,.4),var(--bg) 72%)}
+  .hero-inner{position:relative;z-index:5;padding:0 5vw;max-width:1300px;margin:0 auto;width:100%}
+  .badge{
+    display:inline-flex;align-items:center;gap:8px;padding:7px 16px;border-radius:999px;
+    border:1px solid var(--line);background:var(--glass);font-size:13px;color:var(--gold-2);margin-bottom:28px;
+    backdrop-filter:blur(8px);
+  }
+  .badge .dot{width:7px;height:7px;border-radius:50%;background:var(--cyan);box-shadow:0 0 10px var(--cyan);animation:pulse 1.6s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+  h1.hero-title{
+    font-family:var(--serif);font-size:clamp(40px,6vw,86px);line-height:1.08;font-weight:800;letter-spacing:1px;
+    max-width:900px;
+  }
+  h1.hero-title .grad{
+    background:linear-gradient(120deg,var(--gold),var(--red) 50%,var(--cyan));
+    -webkit-background-clip:text;background-clip:text;color:transparent;
+  }
+  .hero-sub{margin-top:26px;font-size:clamp(16px,1.5vw,20px);color:var(--ink-dim);max-width:560px}
+  .hero-cta{margin-top:40px;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+  .hero-stats{margin-top:64px;display:flex;gap:54px;flex-wrap:wrap}
+  .hero-stats .num{font-family:var(--serif);font-size:34px;font-weight:700;color:var(--gold-2)}
+  .hero-stats .lbl{font-size:13px;color:var(--ink-dim);margin-top:2px}
+
+  /* ---------- 通用 section ---------- */
+  section.block{padding:120px 5vw;position:relative;max-width:1400px;margin:0 auto}
+  .eyebrow{font-size:13px;letter-spacing:4px;color:var(--cyan);text-transform:uppercase;margin-bottom:14px}
+  .sec-title{font-family:var(--serif);font-size:clamp(30px,4vw,52px);font-weight:800;line-height:1.15}
+  .sec-desc{color:var(--ink-dim);max-width:580px;margin-top:16px;font-size:16px}
+  .sec-head{margin-bottom:54px}
+
+  /* ---------- 画廊 ---------- */
+  .gallery-tabs{display:flex;gap:12px;flex-wrap:wrap;margin-bottom:34px}
+  .tab{padding:9px 20px;border-radius:999px;border:1px solid var(--line);background:var(--card);color:var(--ink-dim);font-size:14px;cursor:pointer;transition:all .25s}
+  .tab.active{background:linear-gradient(135deg,var(--gold),var(--gold-2));color:#0a0a0f;border-color:transparent;font-weight:600}
+  .tab:hover:not(.active){color:var(--ink);border-color:var(--gold)}
+  .masonry{columns:4;column-gap:18px}
+  @media(max-width:1100px){.masonry{columns:3}}
+  @media(max-width:760px){.masonry{columns:2}}
+  .art{position:relative;break-inside:avoid;margin-bottom:18px;border-radius:16px;overflow:hidden;cursor:pointer;display:block}
+  .art img{width:100%;display:block;transition:transform .6s cubic-bezier(.2,.7,.3,1)}
+  .art:hover img{transform:scale(1.08)}
+  .art .meta{
+    position:absolute;inset:0;display:flex;flex-direction:column;justify-content:flex-end;padding:18px;
+    background:linear-gradient(0deg,rgba(0,0,0,.8),transparent 55%);
+    opacity:0;transition:opacity .35s;
+  }
+  .art:hover .meta{opacity:1}
+  .art .meta .t{font-family:var(--serif);font-size:18px;font-weight:700}
+  .art .meta .tag{font-size:12px;color:var(--gold-2);margin-top:4px}
+
+  /* ---------- 工作流 ---------- */
+  .flow{display:grid;grid-template-columns:repeat(4,1fr);gap:22px;position:relative;margin-top:30px}
+  @media(max-width:900px){.flow{grid-template-columns:repeat(2,1fr)}}
+  .step{background:var(--card);border:1px solid var(--line);border-radius:18px;padding:26px;position:relative;overflow:hidden;transition:transform .3s,border-color .3s}
+  .step:hover{transform:translateY(-6px);border-color:var(--gold)}
+  .step .idx{font-family:var(--serif);font-size:46px;font-weight:800;color:rgba(232,176,75,.18);position:absolute;top:10px;right:18px}
+  .step .ico{font-size:30px;margin-bottom:14px}
+  .step h4{font-size:18px;margin-bottom:8px}
+  .step p{font-size:14px;color:var(--ink-dim)}
+  .step .bar{height:3px;border-radius:3px;background:linear-gradient(90deg,var(--gold),var(--cyan));margin-top:18px;width:0;transition:width 1s}
+  .step:hover .bar{width:100%}
+
+  /* Before/After */
+  .ba-wrap{margin-top:60px;display:grid;grid-template-columns:1.2fr .8fr;gap:40px;align-items:center}
+  @media(max-width:900px){.ba-wrap{grid-template-columns:1fr}}
+  .ba{position:relative;border-radius:18px;overflow:hidden;aspect-ratio:16/10;user-select:none;border:1px solid var(--line)}
+  .ba img{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  .ba .after{clip-path:inset(0 0 0 50%)}
+  .ba .handle{position:absolute;top:0;bottom:0;left:50%;width:3px;background:var(--gold);box-shadow:0 0 18px var(--gold);cursor:ew-resize;z-index:5}
+  .ba .handle::after{content:"⇄";position:absolute;top:50%;left:50%;transform:translate(-50%,-50%);width:42px;height:42px;border-radius:50%;background:var(--gold);color:#000;display:grid;place-items:center;font-weight:900}
+  .ba .lab{position:absolute;bottom:14px;padding:5px 12px;border-radius:8px;background:rgba(0,0,0,.6);font-size:12px;backdrop-filter:blur(6px)}
+  .ba .lab.l{left:14px}.ba .lab.r{right:14px;color:var(--gold-2)}
+
+  /* ---------- 能力矩阵 ---------- */
+  .grid-cap{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:20px}
+  @media(max-width:900px){.grid-cap{grid-template-columns:1fr 1fr}}
+  @media(max-width:560px){.grid-cap{grid-template-columns:1fr}}
+  .cap{position:relative;border-radius:18px;overflow:hidden;aspect-ratio:4/3;border:1px solid var(--line)}
+  .cap img{width:100%;height:100%;object-fit:cover;transition:transform .6s;filter:brightness(.7)}
+  .cap:hover img{transform:scale(1.06);filter:brightness(.85)}
+  .cap .ov{position:absolute;inset:0;padding:22px;display:flex;flex-direction:column;justify-content:flex-end}
+  .cap .ov h4{font-family:var(--serif);font-size:22px;font-weight:700}
+  .cap .ov p{font-size:13px;color:var(--ink-dim);margin-top:6px}
+  .cap .pill{position:absolute;top:16px;left:16px;font-size:12px;padding:5px 12px;border-radius:999px;background:var(--glass);border:1px solid var(--line);color:var(--cyan);backdrop-filter:blur(6px)}
+
+  /* ---------- 世界观叙事 ---------- */
+  .lore{position:relative;border-radius:26px;overflow:hidden;margin:0 5vw;padding:0;min-height:520px;display:flex;align-items:center}
+  .lore img.bg{position:absolute;inset:0;width:100%;height:100%;object-fit:cover}
+  .lore::after{content:"";position:absolute;inset:0;background:linear-gradient(90deg,rgba(10,10,15,.92) 30%,rgba(10,10,15,.2))}
+  .lore-txt{position:relative;z-index:3;padding:60px;max-width:620px}
+  .lore-txt .seal{font-family:var(--serif);font-size:14px;color:var(--red);border:1px solid var(--red);display:inline-block;padding:4px 12px;border-radius:6px;margin-bottom:20px;letter-spacing:3px}
+
+  /* ---------- CTA & footer ---------- */
+  .final-cta{text-align:center;padding:120px 5vw}
+  .final-cta h2{font-family:var(--serif);font-size:clamp(30px,5vw,60px);font-weight:800;max-width:800px;margin:0 auto 22px}
+  .final-cta .grad{background:linear-gradient(120deg,var(--gold),var(--cyan));-webkit-background-clip:text;background-clip:text;color:transparent}
+  footer{border-top:1px solid var(--line);padding:50px 5vw;display:flex;justify-content:space-between;flex-wrap:wrap;gap:30px;color:var(--ink-dim);font-size:14px}
+  footer .col h5{color:var(--ink);margin-bottom:14px;font-size:15px}
+  footer .col a{display:block;margin-bottom:9px;transition:color .2s}
+  footer .col a:hover{color:var(--gold)}
+
+  /* reveal 动画 */
+  .reveal{opacity:0;transform:translateY(40px);transition:opacity .8s,transform .8s}
+  .reveal.show{opacity:1;transform:none}
+</style>
+</head>
+<body>
+
+<!-- 导航 -->
+<header>
+  <div class="logo"><div class="mark">墨</div>墨灵 · MoLing</div>
+  <nav>
+    <a href="#gallery">作品画廊</a>
+    <a href="#flow">生产流程</a>
+    <a href="#cap">能力矩阵</a>
+    <a href="#lore">世界观</a>
+  </nav>
+  <div style="display:flex;gap:12px">
+    <button class="btn btn-ghost">登录</button>
+    <button class="btn btn-primary">免费创作</button>
+  </div>
+</header>
+
+<!-- HERO -->
+<section class="hero">
+  <div class="hero-flow" id="flow-bg"></div>
+  <canvas id="particles"></canvas>
+  <div class="hero-inner">
+    <div class="badge"><span class="dot"></span>专为游戏美术生产打造的 AI 引擎</div>
+    <h1 class="hero-title">让游戏美术<br>从<span class="grad">灵感到资产</span><br>只需一瞬</h1>
+    <p class="hero-sub">角色、场景、原画、3D、UI 图标，一站式 AI 生产工作流。为独立开发者降本提速，为专业美术保留每一分可控与质感。</p>
+    <div class="hero-cta">
+      <button class="btn btn-primary" style="padding:15px 32px;font-size:16px">开始创作你的世界 →</button>
+      <button class="btn btn-ghost" style="padding:15px 28px;font-size:16px">▶ 观看演示</button>
+    </div>
+    <div class="hero-stats">
+      <div><div class="num">120万+</div><div class="lbl">已生成美术资产</div></div>
+      <div><div class="num">8 大</div><div class="lbl">美术品类覆盖</div></div>
+      <div><div class="num">90%</div><div class="lbl">平均提效幅度</div></div>
+    </div>
+  </div>
+</section>
+
+<!-- 作品画廊 -->
+<section class="block reveal" id="gallery">
+  <div class="sec-head">
+    <div class="eyebrow">ART GALLERY</div>
+    <h2 class="sec-title">每一张，都是可直接入库的资产</h2>
+    <p class="sec-desc">浏览社区与官方精选作品，按品类沉浸式探索 AI 在游戏美术中的真实生产力。</p>
+  </div>
+  <div class="gallery-tabs" id="tabs">
+    <div class="tab active" data-cat="all">全部</div>
+    <div class="tab" data-cat="role">角色设计</div>
+    <div class="tab" data-cat="scene">场景原画</div>
+    <div class="tab" data-cat="ui">UI / 图标</div>
+    <div class="tab" data-cat="3d">3D 资产</div>
+  </div>
+  <div class="masonry" id="masonry"></div>
+</section>
+
+<!-- 生产流程 -->
+<section class="block reveal" id="flow">
+  <div class="sec-head">
+    <div class="eyebrow">PRODUCTION FLOW</div>
+    <h2 class="sec-title">从一句话，到可交付资产</h2>
+    <p class="sec-desc">完整还原专业美术工作流：每一步都可介入、可微调、可重绘，AI 是你的产线而非黑盒。</p>
+  </div>
+  <div class="flow">
+    <div class="step"><div class="idx">01</div><div class="ico">✦</div><h4>概念输入</h4><p>文字、草图或参考图，描述你想要的角色与世界观。</p><div class="bar"></div></div>
+    <div class="step"><div class="idx">02</div><div class="ico">⚡</div><h4>AI 生成</h4><p>多风格并行出图，秒级产出概念方案，自由挑选迭代。</p><div class="bar"></div></div>
+    <div class="step"><div class="idx">03</div><div class="ico">✎</div><h4>精修可控</h4><p>局部重绘、姿态控制、风格锁定，专业级参数随手调。</p><div class="bar"></div></div>
+    <div class="step"><div class="idx">04</div><div class="ico">◈</div><h4>资产导出</h4><p>多分辨率、去背、切图、3D 网格，一键入库进引擎。</p><div class="bar"></div></div>
+  </div>
+
+  <div class="ba-wrap">
+    <div class="ba" id="ba">
+      <img class="before" src="https://picsum.photos/seed/sketch9/1200/750?grayscale" alt="概念草图">
+      <img class="after" src="https://picsum.photos/seed/final9/1200/750" alt="AI 成品">
+      <div class="lab l">概念草图</div>
+      <div class="lab r">AI 精修成品</div>
+      <div class="handle" id="ba-handle"></div>
+    </div>
+    <div>
+      <h3 style="font-family:var(--serif);font-size:30px;margin-bottom:14px">拖动滑块，<br>看见效率的差距</h3>
+      <p style="color:var(--ink-dim);font-size:16px">左侧是 30 秒的潦草草图，右侧是 AI 完成上色、光影与材质后的成品。原本数天的工作量，被压缩到一杯咖啡的时间。</p>
+      <button class="btn btn-primary" style="margin-top:26px">体验完整工作流 →</button>
+    </div>
+  </div>
+</section>
+
+<!-- 能力矩阵 -->
+<section class="block reveal" id="cap">
+  <div class="sec-head">
+    <div class="eyebrow">CAPABILITY MATRIX</div>
+    <h2 class="sec-title">游戏美术，一站全覆盖</h2>
+    <p class="sec-desc">无论你需要立绘、场景、UI 还是 3D，墨灵都为对应品类内置了专业模型与产线。</p>
+  </div>
+  <div class="grid-cap" id="caps"></div>
+</section>
+
+<!-- 世界观叙事 -->
+<section class="lore reveal" id="lore">
+  <img class="bg" src="https://picsum.photos/seed/lore77/1600/900" alt="世界观">
+  <div class="lore-txt">
+    <span class="seal">墨 · 灵 · 录</span>
+    <h2 class="sec-title">构建属于你的<br>东方幻想宇宙</h2>
+    <p class="sec-desc" style="max-width:480px;margin-top:18px">从一个角色 IP 出发，AI 帮你延展出完整的世界观——衍生立绘、场景插画、装备道具、技能图标，风格始终如一。让独立团队，也能拥有大厂级的美术宇宙。</p>
+    <button class="btn btn-primary" style="margin-top:30px">查看世界观案例 →</button>
+  </div>
+</section>
+
+<!-- 最终 CTA -->
+<div class="final-cta reveal">
+  <h2>你的下一个游戏世界，<br>从<span class="grad">这一笔</span>开始</h2>
+  <p style="color:var(--ink-dim);font-size:18px;margin-bottom:34px">免费开始，无需信用卡。专业团队可申请定制私有产线。</p>
+  <button class="btn btn-primary" style="padding:16px 40px;font-size:17px">立即免费创作</button>
+</div>
+
+<!-- 页脚 -->
+<footer>
+  <div style="max-width:300px">
+    <div class="logo" style="margin-bottom:14px"><div class="mark">墨</div>墨灵 · MoLing</div>
+    <p style="font-size:13px">专为游戏美术生产打造的 AI 引擎，让灵感即刻成为资产。</p>
+  </div>
+  <div class="col"><h5>产品</h5><a href="#">角色设计</a><a href="#">场景原画</a><a href="#">3D 资产</a><a href="#">UI 图标</a></div>
+  <div class="col"><h5>资源</h5><a href="#">教程</a><a href="#">案例库</a><a href="#">API 文档</a><a href="#">更新日志</a></div>
+  <div class="col"><h5>团队方案</h5><a href="#">私有产线</a><a href="#">风格定制</a><a href="#">企业合作</a><a href="#">联系我们</a></div>
+</footer>
+
+<script>
+/* ---------- HERO 作品流背景 ---------- */
+(function(){
+  const wrap=document.getElementById('flow-bg');
+  const seeds=['a1','b2','c3','d4','e5','f6','g7','h8','i9','j10','k11','l12','m13','n14','o15','p16','q17','r18','s19','t20','u21','v22','w23','x24'];
+  for(let c=0;c<6;c++){
+    const col=document.createElement('div');
+    col.className='col';
+    col.style.animationDuration=(26+c*4)+'s';
+    let html='';
+    for(let i=0;i<8;i++){
+      const s=seeds[(c*8+i)%seeds.length];
+      html+=`<div class="tile" style="background-image:url(https://picsum.photos/seed/${s}art/300/400)"></div>`;
+    }
+    col.innerHTML=html+html; /* 复制一份实现无缝循环 */
+    wrap.appendChild(col);
+  }
+})();
+
+/* ---------- HERO 粒子 ---------- */
+(function(){
+  const cv=document.getElementById('particles'),ctx=cv.getContext('2d');
+  let w,h,parts=[];
+  function resize(){w=cv.width=cv.offsetWidth;h=cv.height=cv.offsetHeight;}
+  function init(){parts=[];for(let i=0;i<70;i++)parts.push({x:Math.random()*w,y:Math.random()*h,r:Math.random()*1.8+.3,vy:-(Math.random()*.4+.1),a:Math.random()})}
+  function loop(){
+    ctx.clearRect(0,0,w,h);
+    parts.forEach(p=>{
+      p.y+=p.vy;p.a+=.01;
+      if(p.y<0){p.y=h;p.x=Math.random()*w}
+      const o=(Math.sin(p.a)*.4+.5);
+      ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,7);
+      ctx.fillStyle='rgba(232,176,75,'+o+')';ctx.fill();
+    });
+    requestAnimationFrame(loop);
+  }
+  resize();init();loop();
+  window.addEventListener('resize',()=>{resize();init();});
+})();
+
+/* ---------- 画廊数据 ---------- */
+(function(){
+  const data=[
+    {cat:'role',t:'霜羽剑姬',tag:'角色立绘',seed:'role1',ratio:'420/560'},
+    {cat:'scene',t:'云海仙宫',tag:'场景原画',seed:'scene1',ratio:'560/360'},
+    {cat:'role',t:'墨甲机将',tag:'角色立绘',seed:'role2',ratio:'420/600'},
+    {cat:'ui',t:'技能图标组',tag:'UI 资产',seed:'ui1',ratio:'420/420'},
+    {cat:'3d',t:'灵兽坐骑',tag:'3D 模型',seed:'3d1',ratio:'420/500'},
+    {cat:'scene',t:'废都遗迹',tag:'场景原画',seed:'scene2',ratio:'560/380'},
+    {cat:'role',t:'幽冥巫女',tag:'角色立绘',seed:'role3',ratio:'420/580'},
+    {cat:'ui',t:'界面框架',tag:'UI 资产',seed:'ui2',ratio:'420/300'},
+    {cat:'3d',t:'神兵法器',tag:'3D 模型',seed:'3d2',ratio:'420/440'},
+    {cat:'scene',t:'赤焰战场',tag:'场景原画',seed:'scene3',ratio:'560/360'},
+    {cat:'role',t:'青衫游侠',tag:'角色立绘',seed:'role4',ratio:'420/560'},
+    {cat:'3d',t:'机关傀儡',tag:'3D 模型',seed:'3d3',ratio:'420/520'},
+  ];
+  const m=document.getElementById('masonry');
+  function render(cat){
+    m.innerHTML='';
+    data.filter(d=>cat==='all'||d.cat===cat).forEach(d=>{
+      const [rw,rh]=d.ratio.split('/');
+      const el=document.createElement('a');
+      el.className='art';
+      el.innerHTML=`<img src="https://picsum.photos/seed/${d.seed}/${rw}/${rh}" alt="${d.t}" loading="lazy">
+        <div class="meta"><div class="t">${d.t}</div><div class="tag">${d.tag} · AI 生成</div></div>`;
+      m.appendChild(el);
+    });
+  }
+  render('all');
+  document.getElementById('tabs').addEventListener('click',e=>{
+    const t=e.target.closest('.tab');if(!t)return;
+    document.querySelectorAll('.tab').forEach(x=>x.classList.remove('active'));
+    t.classList.add('active');render(t.dataset.cat);
+  });
+})();
+
+/* ---------- 能力矩阵 ---------- */
+(function(){
+  const caps=[
+    {t:'角色设计',d:'立绘、三视图、表情差分、姿态控制',pill:'最热门',seed:'cap-role'},
+    {t:'场景原画',d:'环境概念、关卡氛围、远近景层次',pill:'高分辨率',seed:'cap-scene'},
+    {t:'UI / 图标',d:'界面框、技能图标、按钮、装饰纹样',pill:'矢量友好',seed:'cap-ui'},
+    {t:'3D 资产',d:'文生 3D、图生网格、贴图烘焙',pill:'引擎直出',seed:'cap-3d'},
+    {t:'材质贴图',d:'PBR 材质、无缝纹理、法线生成',pill:'4K',seed:'cap-tex'},
+    {t:'风格迁移',d:'锁定项目美术风格，批量统一产出',pill:'一致性',seed:'cap-style'},
+  ];
+  const box=document.getElementById('caps');
+  caps.forEach(c=>{
+    const el=document.createElement('div');
+    el.className='cap';
+    el.innerHTML=`<img src="https://picsum.photos/seed/${c.seed}/600/450" alt="${c.t}">
+      <div class="pill">${c.pill}</div>
+      <div class="ov"><h4>${c.t}</h4><p>${c.d}</p></div>`;
+    box.appendChild(el);
+  });
+})();
+
+/* ---------- Before/After 滑块 ---------- */
+(function(){
+  const ba=document.getElementById('ba'),handle=document.getElementById('ba-handle'),after=ba.querySelector('.after');
+  let drag=false;
+  function setPos(x){
+    const rect=ba.getBoundingClientRect();
+    let p=(x-rect.left)/rect.width;p=Math.max(0,Math.min(1,p));
+    handle.style.left=(p*100)+'%';
+    after.style.clipPath='inset(0 0 0 '+(p*100)+'%)';
+  }
+  handle.addEventListener('mousedown',()=>drag=true);
+  window.addEventListener('mouseup',()=>drag=false);
+  window.addEventListener('mousemove',e=>{if(drag)setPos(e.clientX)});
+  ba.addEventListener('click',e=>setPos(e.clientX));
+  // 触摸
+  handle.addEventListener('touchstart',()=>drag=true);
+  window.addEventListener('touchend',()=>drag=false);
+  window.addEventListener('touchmove',e=>{if(drag)setPos(e.touches[0].clientX)});
+})();
+
+/* ---------- 滚动揭示 ---------- */
+(function(){
+  const io=new IntersectionObserver(es=>{
+    es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('show');io.unobserve(e.target);}});
+  },{threshold:.12});
+  document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+})();
+</script>
+</body>
+</html>

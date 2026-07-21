@@ -1,0 +1,1696 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>LAP · AI-Powered Game Asset Production Platform</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#050506;--ink:#f2f2f0;--muted:#8a8a90;--lime:#c6f24e;--dot:#d3d3d3;
+    --grid:rgba(255,255,255,.18);
+    --huge:"Anton","Space Grotesk",sans-serif;
+    --display:"Space Grotesk","PingFang SC","Microsoft YaHei",sans-serif;
+    --mono:"JetBrains Mono",monospace;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  body{background:var(--bg);color:var(--ink);font-family:var(--display);overflow-x:hidden;-webkit-font-smoothing:antialiased}
+  button{font-family:inherit;cursor:pointer} a{color:inherit;text-decoration:none}
+  ::selection{background:var(--lime);color:#000}
+
+  /* 顶部导航（固定在顶部，跟随滚动） */
+  header{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:20px 3vw;background:var(--bg);border-bottom:1px solid var(--grid)}
+  /* 占位：把下方内容顶到 header 下方（高度与 header 一致） */
+  .header-spacer{height:71px}
+  .logo{display:flex;align-items:center;font-family:var(--huge);font-size:30px;letter-spacing:.02em}
+  .logo img{height:30px;width:auto;display:block}
+  nav.main{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;gap:34px;font-family:var(--mono);font-size:12px;letter-spacing:.12em}
+  nav.main a{color:var(--ink);opacity:.8;transition:.25s}
+  nav.main a:hover{opacity:1;color:var(--lime)}
+  .right{display:flex;align-items:center;gap:22px}
+  .login{font-family:var(--mono);font-size:12px;letter-spacing:.1em;opacity:.85}
+  .login:hover{opacity:1}
+  .cta{background:var(--lime);color:#0a0a0a;font-family:var(--mono);font-weight:700;font-size:12px;letter-spacing:.08em;padding:11px 20px;border-radius:999px;border:none;display:inline-flex;align-items:center;gap:8px;transition:transform .2s,box-shadow .3s}
+  .cta:hover{transform:translateY(-2px);box-shadow:0 10px 26px rgba(198,242,78,.35)}
+  .cta .ar{width:18px;height:18px;border-radius:50%;background:#0a0a0a;color:var(--lime);display:grid;place-items:center;font-size:9px}
+  @media(max-width:860px){nav.main{display:none}}
+
+  /* 首屏网格 */
+  .hero{position:relative;overflow:hidden}
+  /* 网格：13列正方形格子，宽度铺满视口，在导航下方 */
+  .grid{display:grid;position:relative;z-index:1;border-left:1px solid var(--grid)}
+  .cell{position:relative;border-right:1px solid var(--grid);border-bottom:1px solid var(--grid);perspective:600px}
+  /* 翻转时提升层级，让翻出的 logo 盖在底部标题文字（z-index:5）之上 */
+  .cell.flipped{z-index:10}
+  .cell .flip{position:absolute;inset:0;transform-style:preserve-3d;transition:transform .4s cubic-bezier(.2,.7,.3,1);display:grid;place-items:center}
+  .cell.flipped .flip{transform:rotateX(180deg)}
+  /* 自动切换时的翻转（与手动 flipped 同效果，独立 class 避免冲突） */
+  .cell.auto-flip{z-index:8}
+  .cell.auto-flip .flip{transform:rotateX(180deg)}
+  .face{position:absolute;inset:0;display:grid;place-items:center;backface-visibility:hidden}
+  /* 跨格游戏图块（状态A悬停时出现）：以悬停格为左上角，覆盖 n×n 区域，瞬间出现/消失 */
+  .gameflip{position:absolute;z-index:20;pointer-events:none}
+  .gameflip .gfinner{position:absolute;inset:0}
+  .gameflip .gfimg{position:absolute;inset:0;background:#111;overflow:hidden;border:1px solid var(--grid)}
+  .gameflip .gfimg img{width:100%;height:100%;object-fit:cover;display:block}
+  .face.back{transform:rotateX(180deg);background:#fff}
+  /* 荧光绿圆点装饰（与 GET STARTED 按钮同色） */
+  .dot{width:72%;aspect-ratio:1;border-radius:50%;background:var(--lime)}
+  @media(max-width:860px){.dot{width:62%}}
+  /* logo 卡：白底方格 + 纯黑内联 SVG logo */
+  .logocard{width:100%;height:100%;display:grid;place-items:center;background:#fff}
+  .logocard .glyph{width:46%;height:46%;fill:#000;display:block}
+  /* 斜线装饰 */
+  .slash{position:absolute;z-index:2;width:1px;height:70px;background:rgba(255,255,255,.35);transform-origin:center}
+
+  /* 底部大标题：作为网格 item，占据最后两行（第5、6行），横跨中间列 */
+  .headline{grid-column:2 / 13;grid-row:5 / 7;z-index:5;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;pointer-events:none}
+  .headline h1{font-family:var(--huge);font-size:clamp(24px,3.6vw,50px);line-height:1.5;letter-spacing:.02em;font-weight:400;text-shadow:0 2px 18px rgba(5,5,6,.9),0 0 6px rgba(5,5,6,.8);transition:opacity .5s}
+  .headline h1.fading{opacity:0}
+  .headline .tip{margin-top:22px;font-family:var(--mono);font-size:12px;letter-spacing:.18em;color:var(--muted);pointer-events:auto}
+
+  /* logo 卡结束 */
+
+  /* ===== ② PROMPT 区块 ===== */
+  .prompt{position:relative;min-height:100vh;padding:132px 3vw 90px;display:flex;flex-direction:column;background:var(--bg);overflow:hidden}
+  /* 左上角序号 + 标题 */
+  .prompt-head{display:flex;align-items:flex-start;gap:22px;position:relative;z-index:3}
+  .prompt-head .pnum{font-family:var(--huge);font-size:clamp(56px,7vw,104px);line-height:.9;color:var(--ink)}
+  .prompt-head .ptitle{border-top:1px solid var(--line);padding-top:6px}
+  .prompt-head .ptitle h2{font-family:var(--huge);font-size:clamp(30px,4vw,60px);line-height:1;letter-spacing:.01em;font-weight:400}
+  .prompt-head .ptitle p{margin-top:10px;font-family:var(--mono);font-size:clamp(10px,1vw,13px);letter-spacing:.18em;color:var(--muted)}
+  /* 中央舞台 */
+  .prompt-stage{flex:1;position:relative;display:grid;place-items:center}
+  /* 巨型空心描边字 */
+  .bigword{font-family:var(--huge);font-weight:400;font-size:450px;line-height:1;letter-spacing:.01em;
+    color:transparent;-webkit-text-stroke:1px var(--lime);text-stroke:1px var(--lime);
+    white-space:nowrap;user-select:none;
+    opacity:0;transform:translateY(50px);transition:opacity 1s ease,transform 1s ease}
+  /* 中央输入框（纯展示；滚动叙事时它自己放大变白铺满屏） */
+  .prompt-input{position:absolute;left:50%;top:50%;transform:translate(-50%,calc(-50% + 40px));
+    width:min(620px,78vw);background:#fff;border-radius:999px;
+    display:flex;align-items:center;justify-content:space-between;gap:16px;
+    padding:20px 20px 20px 34px;box-shadow:0 20px 60px rgba(0,0,0,.5);
+    opacity:0;transition:opacity 1s ease .2s,transform 1s ease .2s;
+    z-index:8;will-change:transform,width,height,border-radius;overflow:hidden}
+  .prompt-input span{font-family:var(--display);font-size:clamp(15px,1.6vw,20px);color:#3a3a40}
+  .prompt-input .pi-arrow{flex:none;width:46px;height:46px;border-radius:50%;background:var(--lime);color:#0a0a0f;
+    border:none;cursor:pointer;font-size:20px;display:grid;place-items:center;transition:transform .2s,background .3s}
+  .prompt-input .pi-arrow:hover{transform:translateX(3px);background:var(--lime)}
+  /* 入场动画：滚动进入后触发 */
+  .prompt.in .bigword{opacity:1;transform:translateY(0)}
+  .prompt.in .prompt-input{opacity:1;transform:translate(-50%,-50%)}
+
+  /* ===== 滚动叙事：PROMPT → IMAGE 转场 ===== */
+  /* 叙事容器：由 GSAP pin 钉住并自动撑出滚动行程（不要再叠加 CSS sticky，否则行程冲突） */
+  .story{position:relative}
+  .story-pin{position:relative;height:100vh;overflow:hidden}
+  .lime-connector{position:absolute;left:0;top:0;width:1px;height:1px;background:var(--lime);z-index:22;opacity:0;pointer-events:none;transform-origin:center center;will-change:left,top,width,height,opacity,transform}
+  /* ② IMAGE 区块（白底，转场后淡入；层级高于放大的输入框以承接内容） */
+  .image-sec{position:absolute;inset:0;z-index:9;background:#fff;color:#0a0a0f;
+    padding:132px 3vw 90px;display:flex;flex-direction:column;opacity:0;pointer-events:none}
+  .image-sec .prompt-head .pnum{color:#0a0a0f}
+  .image-sec .prompt-head .ptitle{border-top-color:rgba(0,0,0,.18)}
+  .image-sec .prompt-head .ptitle h2{color:#0a0a0f}
+  .image-sec .prompt-head .ptitle p{color:#5c5866}
+  .image-sec .prompt-stage{flex:1;position:relative;display:grid;place-items:center}
+  .image-sec .bigword{-webkit-text-stroke:1px rgba(0,0,0,.35);text-stroke:1px rgba(0,0,0,.35);
+    opacity:1;transform:none;transition:none;position:absolute}
+  /* 角色四视图（切成 4 张，随滚动从左到右依次出现，压在空心字上） */
+  .image-figures{position:relative;z-index:2;width:min(1320px,94vw);display:flex;align-items:flex-end;justify-content:center;gap:0}
+  .image-figures .fig{height:min(74vh,680px);width:auto;object-fit:contain;display:block;position:relative;z-index:20}
+  .image-figures .fig.f1{transform-origin:center bottom}
+  .image-figures .fig.f4{margin-left:-40px}
+  /* 荧光绿姿势标注条：每个人物右侧一根竖条，底部竖排姿势名 */
+  .pose-bar{align-self:flex-end;flex:0 0 50px;width:50px;min-width:50px;height:538px;background:var(--lime);position:relative;z-index:3;opacity:0;margin-left:-10px;margin-right:clamp(52px,6.2vw,116px)}
+  .pose-bar.b3{margin-right:20px}
+  .pose-bar.b4{margin-right:0;margin-left:-6px}
+  .pose-bar span{position:absolute;left:50%;bottom:22px;transform:translateX(-50%) rotate(180deg);writing-mode:vertical-rl;font-family:var(--mono);font-weight:700;font-size:13px;letter-spacing:.02em;color:#0a0a0f}
+
+  /* ③ 3D 区块：承接第二部分第一张角色图放大到右侧 */
+  .model-sec{position:absolute;inset:0;z-index:12;color:#0a0a0f;padding:132px 3vw 90px;pointer-events:none;opacity:0}
+  .model-sec .prompt-head{z-index:8}
+  .model-sec .prompt-head .pnum{color:#0a0a0f}
+  .model-sec .prompt-head .ptitle{border-top-color:rgba(0,0,0,.18)}
+  .model-sec .prompt-head .ptitle h2{color:#0a0a0f}
+  .model-sec .prompt-head .ptitle p{color:#0a0a0f;letter-spacing:0;text-transform:none;font-family:var(--display);font-size:clamp(14px,1.35vw,18px)}
+  .model-word{position:absolute;left:calc(12vw - 35px);top:calc(32vh + 30px);z-index:8;font-family:var(--huge);font-size:clamp(250px,32vw,500px);line-height:.78;letter-spacing:.01em;color:#fff;-webkit-text-stroke:1px rgba(0,0,0,.5);text-stroke:1px rgba(0,0,0,.5);opacity:0}
+  .model-word::before{content:'3D';position:absolute;left:18px;top:-18px;color:#fff;-webkit-text-stroke:1px rgba(0,0,0,.34);text-stroke:1px rgba(0,0,0,.34);z-index:-1;opacity:.45}
+  .model-info-bar{position:absolute;left:0;right:0;bottom:88px;height:66px;z-index:23;background:transparent;display:flex;align-items:center;gap:28px;padding-left:5.5vw;font-family:var(--mono);font-weight:700;font-size:14px;letter-spacing:.02em;color:#0a0a0f;opacity:0;pointer-events:none}
+  .model-info-bar span{display:inline-flex;align-items:center;gap:9px;white-space:nowrap;transform:translateY(24px)}
+  .model-info-bar span::before{content:'';width:13px;height:13px;border-radius:50%;background:#0a0a0f;display:inline-block}
+  .model-video{position:absolute;left:0;top:0;width:1px;height:1px;display:block;opacity:0;z-index:4;overflow:hidden;transform-origin:center top;will-change:left,top,width,height,opacity}
+  .model-video img,.model-video video{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;object-position:center center;display:block}
+  .model-video .model-still,.model-video .animation-video{opacity:0}
+  .model-video .animation-video{transform:scale(1.38);transform-origin:center center}
+  .run-rock-layer{position:absolute;left:0;right:0;bottom:0;height:34%;z-index:6;pointer-events:none;overflow:visible}
+  .run-rock{position:absolute;left:24%;bottom:18%;width:18px;height:14px;background:#3b332e;border-radius:38% 55% 42% 48%;opacity:.72;transform-origin:center;animation:rockBurst .86s ease-out forwards}
+  .run-rock:nth-child(2n){background:#51463d;border-radius:52% 36% 48% 42%}
+  .run-rock:nth-child(3n){background:#2a2622;border-radius:45% 50% 35% 58%}
+  @keyframes rockBurst{0%{opacity:.78;transform:translate(0,0) scale(1.35) rotate(0deg)}55%{opacity:.62}100%{opacity:0;transform:translate(var(--rx),var(--ry)) scale(.18) rotate(var(--rr))}}
+
+  /* ④ ANIMATION 区块：视频结束后切换，右侧媒体替换回原始人物图 */
+  .ui-sec{position:absolute;inset:0;z-index:20;background:transparent;color:#0a0a0f;padding:132px 3vw 90px;pointer-events:none;opacity:0;overflow:hidden}
+  .ui-sec .prompt-head{z-index:30}
+  .ui-sec .prompt-head .pnum{color:#0a0a0f}
+  .ui-sec .prompt-head .ptitle{border-top-color:rgba(0,0,0,.18)}
+  .ui-sec .prompt-head .ptitle h2{color:#0a0a0f}
+  .ui-sec .prompt-head .ptitle p{color:#0a0a0f;letter-spacing:0;text-transform:none;font-family:var(--display);font-size:clamp(14px,1.35vw,18px)}
+  .ui-word{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:30;font-family:var(--huge);font-size:380px;line-height:.8;white-space:nowrap;color:transparent;-webkit-text-stroke:1px rgba(0,0,0,.52);text-stroke:1px rgba(0,0,0,.52);opacity:0}
+  .ui-lime-panel{position:absolute;left:0;top:0;bottom:0;width:150px;background:transparent;z-index:0;opacity:0}
+  .action-icons{position:absolute;left:62px;bottom:66px;z-index:35;display:flex;align-items:center;gap:12px;opacity:0}
+  .action-icon{width:102px;height:66px;background:rgba(0,0,0,.12);display:grid;place-items:center;color:#0a0a0f}
+  .action-icon:first-child{width:76px;background:transparent}
+  .action-icon img{width:42px;height:42px;object-fit:contain;display:block}
+  .action-icon.shoot img{width:48px;height:42px}
+  .ui-collage,.ui-card{display:none}
+
+  /* ⑤ WORKFLOW 区块：AI 工作流画布（第四部分下面的横向节点链条） */
+  .workflow-sec{position:relative;min-height:100vh;background:#101113;color:#f3f3f0;opacity:1;overflow:hidden}
+  .workflow-sec::before{content:'';position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.11) 1px,transparent 1px);background-size:18px 18px;opacity:.34}
+  .workflow-copy{position:absolute;left:3vw;top:16vh;z-index:4;display:flex;align-items:flex-start;gap:34px;width:auto}
+  .workflow-copy h2{font-family:var(--huge);font-size:clamp(58px,5.6vw,86px);line-height:.86;font-weight:400;letter-spacing:.01em;color:var(--lime)}
+  .workflow-copy p{margin-top:2px;width:560px;font-family:var(--display);font-size:clamp(19px,1.55vw,24px);line-height:1.08;color:#f4f4f2}
+  .workflow-viewport{position:absolute;left:1.6vw;right:0;top:30vh;height:60vh;z-index:3;overflow:hidden}
+  .workflow-canvas{position:absolute;left:80px;top:0;width:2260px;height:100%;will-change:transform}
+  .wf-node{position:absolute;width:210px;opacity:0;transform:translateX(-50px)}
+  .wf-node.wide{width:320px}
+  .wf-title{font-family:var(--mono);font-size:10px;color:#d8d8d8;margin:0 0 8px 4px;display:flex;align-items:center;gap:6px}
+  .wf-card{height:132px;border-radius:5px;background:#242424;border:1px solid rgba(255,255,255,.04);box-shadow:0 20px 50px rgba(0,0,0,.25);position:relative;color:#8d8d8d;padding:14px;font-family:var(--display);font-size:12px}
+  .wf-card.big{height:132px}.wf-card.mid{height:132px}
+  .wf-card .center-icon{position:absolute;inset:0;display:grid;place-items:center;color:#e7e7e7;font-size:36px;opacity:.95}
+  .wf-card .center-icon.play::before{content:'';width:0;height:0;border-top:18px solid transparent;border-bottom:18px solid transparent;border-left:31px solid #e7e7e7;display:block}
+  .wf-chip{height:22px;border-radius:5px;background:#2b2b2b;margin-top:8px;color:#d8d8d8;font-family:var(--mono);font-size:9px;display:flex;align-items:center;padding:0 9px;gap:6px;white-space:nowrap}
+  .wf-chip::before{content:'';width:12px;height:12px;border-radius:50%;background:#474747;display:inline-block;flex:none}
+  .wf-line{position:absolute;height:2px;background:#777;opacity:0;transform-origin:left center;z-index:-1}
+  .wf-line span{position:absolute;left:50%;top:-18px;transform:translateX(-50%);font-family:var(--mono);font-size:10px;color:#dedede;background:#101113;padding:0 5px}
+  .wf-n1{left:0;top:0}.wf-n2{left:285px;top:214px}.wf-n3{left:570px;top:0}.wf-n4{left:860px;top:214px}.wf-n5{left:1180px;top:0}.wf-n6{left:1530px;top:214px}.wf-n7{left:1880px;top:0}
+  .wf-l1{left:210px;top:83px;width:150px;transform:rotate(48deg)}.wf-l2{left:495px;top:297px;width:150px;transform:rotate(-48deg)}.wf-l3{left:780px;top:83px;width:150px;transform:rotate(48deg)}.wf-l4{left:1070px;top:297px;width:160px;transform:rotate(-44deg)}.wf-l5{left:1500px;top:83px;width:130px;transform:rotate(55deg)}.wf-l6{left:1840px;top:297px;width:150px;transform:rotate(-55deg)}
+
+  /* ⑥ WATCHER / AGENT 区块：眼睛跟随鼠标的小球 */
+  .watcher-sec{position:relative;min-height:100vh;background:#050607;color:#f3f3f0;overflow:hidden;display:grid;place-items:center}
+  .watcher-sec::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 50% 46%,rgba(120,150,255,.08),transparent 40%);opacity:.85}
+  .watcher-copy{position:absolute;left:50%;top:50%;transform:translate(calc(-50% - 540px),-50%);z-index:3;width:min(400px,30vw)}
+  .watcher-copy h2{font-family:var(--huge);font-size:clamp(64px,7vw,120px);line-height:.86;font-weight:400;color:var(--lime)}
+  .watcher-copy .wc-rule{margin:14px 0 16px;height:1px;width:78%;background:rgba(255,255,255,.4)}
+  .watcher-copy p{font-family:var(--display);font-size:clamp(17px,1.5vw,23px);line-height:1.28;color:#f4f4f2}
+  .orb-stage{--eye-x:0px;--eye-y:0px;position:relative;z-index:2;width:560px;height:560px;display:grid;place-items:center}
+  .orb-stage::before{content:'';position:absolute;width:455px;height:455px;border-radius:50%;background:radial-gradient(circle,rgba(190,232,255,.46),rgba(255,255,255,.2) 34%,transparent 58%);filter:blur(30px);opacity:.58;animation:gasBreath 3.4s ease-in-out infinite;transform-origin:center center}
+  .watcher-canvas{position:absolute;width:430px;height:430px;display:block;filter:drop-shadow(0 0 28px rgba(255,255,255,.42)) drop-shadow(0 0 46px rgba(255,255,255,.14));z-index:1}
+  .orb-eyes{position:absolute;left:50%;top:50%;z-index:3;display:flex;gap:42px;transform:translate(-50%,-50%) translate(var(--eye-x),var(--eye-y));transition:transform .08s linear}
+  .eye{width:32px;height:72px;border-radius:18px;background:#fff;box-shadow:0 0 18px rgba(255,255,255,.85);transform-origin:center center;transition:transform .09s ease,opacity .09s ease}
+  .orb-eyes.blink .eye{transform:scaleY(.06);opacity:.92}
+  .orb-shadow{position:absolute;bottom:92px;width:265px;height:38px;border-radius:50%;background:rgba(0,0,0,.58);filter:blur(11px);opacity:.42;z-index:0}
+  /* 右侧聊天气泡：随滚动逐条显示，最多 3 条并整体与小球居中 */
+  .agent-chat{position:absolute;left:50%;top:50%;transform:translate(calc(-50% + 620px),-50%);z-index:4;width:min(430px,32vw);height:360px}
+  .chat-bubble{position:absolute;left:0;top:50%;background:#fff;color:#0a0a0f;font-family:var(--display);font-weight:600;font-size:clamp(15px,1.35vw,20px);letter-spacing:.02em;padding:15px 26px;border-radius:34px;box-shadow:0 18px 40px rgba(0,0,0,.4);opacity:0;white-space:nowrap;will-change:transform,opacity}
+  .chat-bubble::after{content:'';position:absolute;left:30px;bottom:-9px;width:20px;height:20px;background:#fff;border-radius:0 0 0 6px;transform:rotate(45deg)}
+  @keyframes gasBreath{0%,100%{transform:scale(.9);opacity:.42}50%{transform:scale(1.08);opacity:.76}}
+
+  /* ⑦ ASSET 区块：自旋转变形魔方 —— 内容围绕屏幕中央聚拢，大屏两侧留白 */
+  .asset-sec{position:relative;min-height:100vh;background:#050607;color:#f3f3f0;overflow:hidden;display:grid;place-items:center;border-top:1px solid rgba(255,255,255,.14)}
+  .asset-sec::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 50% 46%,rgba(160,160,180,.10),transparent 42%);opacity:.9}
+  .asset-copy{position:absolute;left:50%;top:50%;transform:translate(calc(-50% - 560px),-50%);z-index:3;width:min(400px,30vw)}
+  .asset-copy h2{font-family:var(--huge);font-size:clamp(64px,7vw,120px);line-height:.86;font-weight:400;color:var(--lime)}
+  .asset-copy .wc-rule{margin:14px 0 16px;height:1px;width:78%;background:rgba(255,255,255,.4)}
+  .asset-copy p{font-family:var(--display);font-size:clamp(17px,1.5vw,23px);line-height:1.3;color:#f4f4f2}
+  .asset-canvas{position:relative;z-index:2;width:min(520px,42vw);height:min(520px,58vh);display:block}
+  .asset-points{position:absolute;left:50%;top:50%;transform:translate(calc(-50% + 560px),-50%);z-index:3;display:flex;flex-direction:column;gap:34px;width:min(380px,30vw)}
+  .asset-point{display:flex;align-items:flex-start;gap:16px;font-family:var(--display);font-size:clamp(16px,1.4vw,21px);line-height:1.2;color:#f4f4f2;opacity:0;transform:translateX(28px)}
+  .asset-point .dot{flex:none;width:24px;height:24px;border-radius:4px;background:#e9e9e9;margin-top:2px}
+
+  /* ⑧ SECURITY 区块：可开合门的保险箱 —— 内容围绕屏幕中央聚拢，大屏两侧留白 */
+  .security-sec{position:relative;min-height:100vh;background:#050607;color:#f3f3f0;overflow:hidden;display:grid;place-items:center;border-top:1px solid rgba(255,255,255,.14)}
+  .security-sec::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 50% 48%,rgba(150,155,165,.10),transparent 44%);opacity:.9}
+  .security-copy{position:absolute;left:50%;top:50%;transform:translate(calc(-50% - 560px),-50%);z-index:3;width:min(400px,30vw)}
+  .security-copy h2{font-family:var(--huge);font-size:clamp(64px,7vw,120px);line-height:.86;font-weight:400;color:var(--lime)}
+  .security-copy .wc-rule{margin:14px 0 16px;height:1px;width:78%;background:rgba(255,255,255,.4)}
+  .security-copy p{font-family:var(--display);font-size:clamp(17px,1.5vw,23px);line-height:1.3;color:#f4f4f2}
+  .security-canvas{position:relative;z-index:2;width:min(640px,50vw);height:min(600px,66vh);display:block}
+  .security-points{position:absolute;left:50%;top:50%;transform:translate(calc(-50% + 560px),-50%);z-index:3;display:flex;flex-direction:column;gap:34px;width:min(380px,30vw)}
+  .security-point{display:flex;align-items:flex-start;gap:16px;font-family:var(--display);font-size:clamp(16px,1.4vw,21px);line-height:1.2;color:#f4f4f2;opacity:0;transform:translateX(28px)}
+  .security-point .dot{flex:none;width:24px;height:24px;border-radius:4px;background:#e9e9e9;margin-top:2px}
+
+  /* ⑨ 页尾 FOOTER */
+  .site-footer{position:relative;background:#050506;color:var(--ink);border-top:1px solid rgba(255,255,255,.1);overflow:hidden;padding:96px 3vw 40px}
+  .site-footer::before{content:'';position:absolute;left:0;right:0;top:0;height:2px;background:linear-gradient(90deg,transparent,var(--lime),transparent);opacity:.7}
+  .footer-cta{display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:40px;padding-bottom:72px;border-bottom:1px solid rgba(255,255,255,.1)}
+  .footer-cta h2{font-family:var(--huge);font-weight:400;font-size:clamp(40px,7vw,110px);line-height:1.14;letter-spacing:.01em}
+  .footer-cta h2 em{font-style:normal;color:var(--lime)}
+  .footer-cta .fbtn{flex:none;background:var(--lime);color:#0a0a0a;font-family:var(--mono);font-weight:700;font-size:clamp(16px,1.5vw,22px);letter-spacing:.05em;padding:22px 42px;border-radius:999px;border:none;display:inline-flex;align-items:center;gap:14px;transition:transform .2s,box-shadow .3s}
+  .footer-cta .fbtn:hover{transform:translateY(-3px);box-shadow:0 16px 40px rgba(198,242,78,.36)}
+  .footer-cta .fbtn .ar{width:28px;height:28px;border-radius:50%;background:#0a0a0a;color:var(--lime);display:grid;place-items:center;font-size:12px}
+  .footer-cols{display:flex;justify-content:space-between;align-items:flex-start;gap:64px;padding:64px 0}
+  .footer-links{display:grid;grid-template-columns:repeat(4,auto);gap:clamp(72px,9vw,180px);justify-content:end}
+  .footer-brand .flogo{font-family:var(--huge);font-size:56px;letter-spacing:.02em;line-height:1}
+  .footer-brand p{margin-top:18px;max-width:340px;font-family:var(--display);font-size:15px;line-height:1.5;color:var(--muted)}
+  .footer-brand .socials{margin-top:24px;display:flex;gap:12px}
+  .footer-brand .socials a{width:40px;height:40px;border-radius:50%;border:1px solid rgba(255,255,255,.2);display:grid;place-items:center;font-family:var(--mono);font-size:12px;color:var(--ink);transition:.25s}
+  .footer-brand .socials a:hover{border-color:var(--lime);color:var(--lime)}
+  .footer-col h4{font-family:var(--mono);font-size:11px;letter-spacing:.18em;color:var(--muted);margin-bottom:20px}
+  .footer-col a{display:block;font-family:var(--display);font-size:15px;color:var(--ink);opacity:.82;padding:7px 0;transition:.22s}
+  .footer-col a:hover{opacity:1;color:var(--lime);transform:translateX(4px)}
+  .footer-bottom{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px;padding-top:34px;border-top:1px solid rgba(255,255,255,.1);font-family:var(--mono);font-size:12px;letter-spacing:.06em;color:var(--muted)}
+  .footer-bottom .legal{display:flex;gap:26px;flex-wrap:wrap}
+  .footer-bottom .legal a:hover{color:var(--lime)}
+  @media(max-width:860px){.footer-cols{flex-direction:column;gap:40px}.footer-links{grid-template-columns:1fr 1fr;justify-content:start;gap:32px}}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo"><img src="assets/logos/lap-logo-white.png" alt="LAP"></div>
+  <nav class="main">
+    <a href="#">FEATURES</a><a href="#">AI TOOLS</a><a href="#">ASSET TYPES</a><a href="#">PRICING</a><a href="#">ABOUT</a>
+  </nav>
+  <div class="right">
+    <a class="login" href="#">LOG IN</a>
+    <button class="cta">GET STARTED <span class="ar">▶</span></button>
+  </div>
+</header>
+
+<div class="header-spacer"></div>
+
+<section class="hero">
+  <div class="grid" id="grid">
+    <div class="headline">
+      <h1 id="headlineText">AI-POWERED GAME ASSET<br>PRODUCTION PLATFORM</h1>
+    </div>
+  </div>
+</section>
+
+<!-- ② PROMPT → IMAGE 滚动叙事 -->
+<div class="story" id="story">
+  <div class="story-pin">
+    <div class="lime-connector" id="limeConnector" aria-hidden="true"></div>
+    <!-- PROMPT 区块 -->
+    <section class="prompt in" id="prompt">
+      <div class="prompt-head">
+        <span class="pnum">01</span>
+        <div class="ptitle">
+          <h2>PROMPT</h2>
+          <p>EVERYTHING START FROM SOME WORDS</p>
+        </div>
+      </div>
+      <div class="prompt-stage">
+        <div class="bigword" aria-hidden="true">PROMPT</div>
+        <div class="prompt-input" id="promptInput">
+          <span>What do you want to design?</span>
+          <button class="pi-arrow" aria-label="生成">&rarr;</button>
+        </div>
+      </div>
+    </section>
+
+    <!-- IMAGE 区块（白底，转场后淡入） -->
+    <section class="image-sec" id="imageSec">
+      <div class="prompt-head">
+        <span class="pnum">02</span>
+        <div class="ptitle">
+          <h2>IMAGE</h2>
+          <p>TURN A SIMPLE IDEA INTO STUNNING CONCEPT ART</p>
+        </div>
+      </div>
+      <div class="prompt-stage">
+        <div class="bigword" aria-hidden="true">IMAGE</div>
+        <div class="image-figures">
+          <img class="fig f1" src="assets/views/view1.png" alt="角色视图1">
+          <div class="pose-bar b1"><span>FRONT</span></div>
+          <img class="fig f2" src="assets/views/view2.png" alt="角色视图2">
+          <div class="pose-bar b2"><span>SIDE</span></div>
+          <img class="fig f3" src="assets/views/view3.png" alt="角色视图3">
+          <div class="pose-bar b3"><span>BACK</span></div>
+          <img class="fig f4" src="assets/views/view4.png" alt="角色视图4">
+          <div class="pose-bar b4"><span>SIDE</span></div>
+        </div>
+      </div>
+    </section>
+
+    <!-- ③ 3D 区块（由第二部分第一张图移动放大承接） -->
+    <section class="model-sec" id="modelSec">
+      <div class="prompt-head">
+        <span class="pnum">03</span>
+        <div class="ptitle">
+          <h2>3D</h2>
+          <p>Generate production-ready 3D models automatically.</p>
+        </div>
+      </div>
+      <div class="model-word" aria-hidden="true">3D</div>
+      <div class="model-video" id="modelVideoWrap" aria-hidden="true">
+        <img id="modelFrame" src="assets/video-frames/frame_0001.jpg" alt="3D 生成过程帧">
+        <img class="model-still" id="modelStill" src="assets/views/view1.png" alt="角色原始图">
+        <video class="animation-video" id="animationVideo" src="assets/animation-auto.mp4" muted playsinline preload="auto"></video>
+        <div class="run-rock-layer" id="runRockLayer" aria-hidden="true"></div>
+      </div>
+    </section>
+
+    <div class="model-info-bar" aria-hidden="true">
+      <span>HIGH POLY</span>
+      <span>CLEAN TOPOLOGY</span>
+      <span>PRB MATERIALS</span>
+    </div>
+
+    <!-- ④ ANIMATION 区块（视频结束后，右侧重新替换回原始人物图） -->
+    <section class="ui-sec" id="uiSec">
+      <div class="ui-lime-panel" aria-hidden="true"></div>
+      <div class="prompt-head">
+        <span class="pnum">04</span>
+        <div class="ptitle">
+          <h2>ANIMATION</h2>
+          <p>Bring your character to life with AI-powered animation.</p>
+        </div>
+      </div>
+      <div class="ui-word" aria-hidden="true">ANIMATION</div>
+      <div class="action-icons" aria-hidden="true">
+        <div class="action-icon run"><img src="assets/action-run.svg" alt="跑动"></div>
+        <div class="action-icon jump"><img src="assets/action-jump.svg" alt="跳跃"></div>
+        <div class="action-icon stand"><img src="assets/action-stand.svg" alt="站立"></div>
+        <div class="action-icon shoot"><img src="assets/action-shoot.svg" alt="射击"></div>
+      </div>
+    </section>
+
+  </div>
+</div>
+
+<!-- ⑤ WORKFLOW 区块：AI 工作流画布，位于第四部分下面，随页面滚动自然出现 -->
+<section class="workflow-sec" id="workflowSec">
+  <div class="workflow-copy">
+    <h2>WORKFLOW</h2>
+    <p>Integrated pipeline from idea to in-game<br>asset. All in one powerful platform.</p>
+  </div>
+  <div class="workflow-viewport">
+    <div class="workflow-canvas">
+      <div class="wf-line wf-l1"><span>图片</span></div>
+      <div class="wf-line wf-l2"><span>文本</span></div>
+      <div class="wf-line wf-l3"><span>图片</span></div>
+      <div class="wf-line wf-l4"><span>视频</span></div>
+      <div class="wf-line wf-l5"><span>反馈</span></div>
+      <div class="wf-line wf-l6"><span>视频</span></div>
+      <div class="wf-node wf-n1">
+        <div class="wf-title">▣ 图片生成</div>
+        <div class="wf-card mid"><div class="center-icon">▧</div></div>
+        <div class="wf-chip">Midjourney V8.1　2K · 1:1 · 1</div>
+      </div>
+      <div class="wf-node wf-n2">
+        <div class="wf-title">☰ 文本</div>
+        <div class="wf-card">双击开始编辑...</div>
+        <div class="wf-chip">Gemini 3.5 Flash</div>
+      </div>
+      <div class="wf-node wf-n3">
+        <div class="wf-title">▣ 图片生成</div>
+        <div class="wf-card mid"><div class="center-icon">▧</div></div>
+        <div class="wf-chip">Midjourney V8.1　2K · 1:1 · 1</div>
+      </div>
+      <div class="wf-node wf-n4">
+        <div class="wf-title">▣ 图片生成</div>
+        <div class="wf-card mid"><div class="center-icon">▧</div></div>
+        <div class="wf-chip">Midjourney V8.1　2K · 1:1 · 1</div>
+      </div>
+      <div class="wf-node wf-n5 wide">
+        <div class="wf-title">▣ 视频生成</div>
+        <div class="wf-card big"><div class="center-icon play"></div></div>
+        <div class="wf-chip">Seedance2.0Mini　720p · 自适应</div>
+      </div>
+      <div class="wf-node wf-n6 wide">
+        <div class="wf-title">▣ 视频生成</div>
+        <div class="wf-card big"><div class="center-icon play"></div></div>
+        <div class="wf-chip">Seedance2.0Mini　720p · 自适应</div>
+      </div>
+      <div class="wf-node wf-n7 wide">
+        <div class="wf-title">▣ 视频生成</div>
+        <div class="wf-card big"><div class="center-icon play"></div></div>
+        <div class="wf-chip">Seedance2.0Mini　1080p · 最终输出</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ⑥ AGENT 区块：眼睛跟随鼠标的小球 + 聊天气泡 -->
+<section class="watcher-sec" id="watcherSec">
+  <div class="watcher-copy">
+    <h2>AGENT</h2>
+    <div class="wc-rule"></div>
+    <p>Modular agent design supporting customizable, scenario-based applications to enhance the intelligence of asset processing</p>
+  </div>
+  <div class="orb-stage" id="watcherStage">
+    <div class="orb-shadow" aria-hidden="true"></div>
+    <canvas class="watcher-canvas" id="watcherCanvas" aria-hidden="true"></canvas>
+    <div class="orb-eyes" id="watcherEyes" aria-hidden="true">
+      <div class="eye"></div>
+      <div class="eye"></div>
+    </div>
+  </div>
+  <div class="agent-chat" id="agentChat">
+    <div class="chat-bubble">HELLO!</div>
+    <div class="chat-bubble">WHAT CAN I HELP YOU?</div>
+    <div class="chat-bubble">GENERATE A GAME CHARACTER</div>
+    <div class="chat-bubble">ON IT — RENDERING NOW</div>
+    <div class="chat-bubble">NEED A 3D MODEL TOO?</div>
+    <div class="chat-bubble">IM ON MY WAY!</div>
+  </div>
+</section>
+
+<!-- ⑦ ASSET 区块：自旋转变形的立体魔方 -->
+<section class="asset-sec" id="assetSec">
+  <div class="asset-copy">
+    <h2>Asset</h2>
+    <div class="wc-rule"></div>
+    <p>Centrally manage models, assets, and version information. Ensure clear, traceable asset lifecycles, enabling asset accumulation and refined operations</p>
+  </div>
+  <canvas class="asset-canvas" id="assetCanvas" aria-hidden="true"></canvas>
+  <div class="asset-points" id="assetPoints">
+    <div class="asset-point"><span class="dot"></span><span>Unified management of various types of assets</span></div>
+    <div class="asset-point"><span class="dot"></span><span>Clear and traceable asset lineage</span></div>
+    <div class="asset-point"><span class="dot"></span><span>Refined asset accumulation and operations</span></div>
+  </div>
+</section>
+
+<!-- ⑧ SECURITY 区块：可开合门的保险箱 -->
+<section class="security-sec" id="securitySec">
+  <div class="security-copy">
+    <h2>Security</h2>
+    <div class="wc-rule"></div>
+    <p>Make a rock-solid commitment regarding "data security"—the issue of greatest concern to B2B clients—thereby establishing a high level of business trust.</p>
+  </div>
+  <canvas class="security-canvas" id="securityCanvas" aria-hidden="true"></canvas>
+  <div class="security-points" id="securityPoints">
+    <div class="security-point"><span class="dot"></span><span>Absolute data isolation</span></div>
+    <div class="security-point"><span class="dot"></span><span>The platform adheres to its positioning as a tool and does not compete in the gaming market.</span></div>
+    <div class="security-point"><span class="dot"></span><span>Strict Compliance and Access Control</span></div>
+  </div>
+</section>
+
+<!-- ⑨ 页尾 -->
+<footer class="site-footer">
+  <div class="footer-cta">
+    <h2>Build your next<br>asset pipeline <em>with AI.</em></h2>
+    <button class="fbtn">START BUILDING <span class="ar">▶</span></button>
+  </div>
+  <div class="footer-cols">
+    <div class="footer-brand">
+      <div class="flogo">LAP</div>
+      <p>An AI-native platform for generating, managing, and securing your creative assets — from prompt to production.</p>
+      <div class="socials">
+        <a href="#" aria-label="X">X</a>
+        <a href="#" aria-label="GitHub">GH</a>
+        <a href="#" aria-label="Discord">DC</a>
+        <a href="#" aria-label="YouTube">YT</a>
+      </div>
+    </div>
+    <div class="footer-links">
+      <div class="footer-col">
+        <h4>PRODUCT</h4>
+        <a href="#">Features</a>
+        <a href="#">AI Tools</a>
+        <a href="#">Asset Types</a>
+        <a href="#">Pricing</a>
+        <a href="#">Changelog</a>
+      </div>
+      <div class="footer-col">
+        <h4>RESOURCES</h4>
+        <a href="#">Documentation</a>
+        <a href="#">API Reference</a>
+        <a href="#">Tutorials</a>
+        <a href="#">Community</a>
+      </div>
+      <div class="footer-col">
+        <h4>COMPANY</h4>
+        <a href="#">About</a>
+        <a href="#">Careers</a>
+        <a href="#">Blog</a>
+        <a href="#">Contact</a>
+      </div>
+      <div class="footer-col">
+        <h4>SUPPORT</h4>
+        <a href="#">Help Center</a>
+        <a href="#">Status</a>
+        <a href="#">Security</a>
+        <a href="#">Contact Sales</a>
+      </div>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>© 2026 LAP. All rights reserved.</span>
+    <div class="legal">
+      <a href="#">Privacy Policy</a>
+      <a href="#">Terms of Service</a>
+      <a href="#">Cookies</a>
+    </div>
+  </div>
+</footer>
+
+<!-- 本地库：GSAP + ScrollTrigger + Lenis（滚动叙事） -->
+<script src="libs/gsap.min.js"></script>
+<script src="libs/ScrollTrigger.min.js"></script>
+<script src="libs/lenis.min.js"></script>
+<script src="libs/three.min.js"></script>
+
+<script>
+/* ===== AI 大模型 logo：Simple Icons 官方 SVG path（CC0 开源），内联以支持 file:// 双击打开 =====
+   viewBox 均为 0 0 24 24，纯黑填充，白底方格中央 */
+const TOOLS=[
+  {n:'OpenAI / ChatGPT',p:'M22.2819 9.8211a5.9847 5.9847 0 0 0-.5157-4.9108 6.0462 6.0462 0 0 0-6.5098-2.9A6.0651 6.0651 0 0 0 4.9807 4.1818a5.9847 5.9847 0 0 0-3.9977 2.9 6.0462 6.0462 0 0 0 .7427 7.0966 5.98 5.98 0 0 0 .511 4.9107 6.051 6.051 0 0 0 6.5146 2.9001A5.9847 5.9847 0 0 0 13.2599 24a6.0557 6.0557 0 0 0 5.7718-4.2058 5.9894 5.9894 0 0 0 3.9977-2.9001 6.0557 6.0557 0 0 0-.7475-7.0729zm-9.022 12.6081a4.4755 4.4755 0 0 1-2.8764-1.0408l.1419-.0804 4.7783-2.7582a.7948.7948 0 0 0 .3927-.6813v-6.7369l2.02 1.1686a.071.071 0 0 1 .038.052v5.5826a4.504 4.504 0 0 1-4.4945 4.4944zm-9.6607-4.1254a4.4708 4.4708 0 0 1-.5346-3.0137l.142.0852 4.783 2.7582a.7712.7712 0 0 0 .7806 0l5.8428-3.3685v2.3324a.0804.0804 0 0 1-.0332.0615L9.74 19.9502a4.4992 4.4992 0 0 1-6.1408-1.6464zM2.3408 7.8956a4.485 4.485 0 0 1 2.3655-1.9728V11.6a.7664.7664 0 0 0 .3879.6765l5.8144 3.3543-2.0201 1.1685a.0757.0757 0 0 1-.071 0l-4.8303-2.7865A4.504 4.504 0 0 1 2.3408 7.872zm16.5963 3.8558L13.1038 8.364 15.1192 7.2a.0757.0757 0 0 1 .071 0l4.8303 2.7913a4.4944 4.4944 0 0 1-.6765 8.1042v-5.6772a.79.79 0 0 0-.407-.667zm2.0107-3.0231l-.142-.0852-4.7735-2.7818a.7759.7759 0 0 0-.7854 0L9.409 9.2297V6.8974a.0662.0662 0 0 1 .0284-.0615l4.8303-2.7866a4.4992 4.4992 0 0 1 6.6802 4.66zM8.3065 12.863l-2.02-1.1638a.0804.0804 0 0 1-.038-.0567V6.0742a4.4992 4.4992 0 0 1 7.3757-3.4537l-.142.0805L8.704 5.459a.7948.7948 0 0 0-.3927.6813zm1.0976-2.3654l2.602-1.4998 2.6069 1.4998v2.9994l-2.5974 1.4997-2.6067-1.4997Z'},
+  {n:'Google Gemini',p:'M11.04 19.32Q12 21.51 12 24q0-2.49.93-4.68.96-2.19 2.58-3.81t3.81-2.55Q21.51 12 24 12q-2.49 0-4.68-.93a12.3 12.3 0 0 1-3.81-2.58 12.3 12.3 0 0 1-2.58-3.81Q12 2.49 12 0q0 2.49-.96 4.68-.93 2.19-2.55 3.81a12.3 12.3 0 0 1-3.81 2.58Q2.49 12 0 12q2.49 0 4.68.96 2.19.93 3.81 2.55t2.55 3.81'},
+  {n:'Anthropic',p:'M17.3041 3.541h-3.6718l6.696 16.918H24Zm-10.6082 0L0 20.459h3.7442l1.3693-3.5527h7.0052l1.3693 3.5528h3.7442L10.5363 3.5409Zm-.3712 10.2232 2.2914-5.9456 2.2914 5.9456Z'},
+  {n:'Suno',p:'M16.5 0C20.642 0 24 5.373 24 12h-9c0 6.627-3.358 12-7.5 12C3.358 24 0 18.627 0 12h9c0-6.627 3.358-12 7.5-12Z'},
+  {n:'Adobe Firefly',p:'M13.966 22.624l-1.69-4.281H8.122l3.892-9.144 5.662 13.425zM8.884 1.376H0v21.248zm15.116 0h-8.884L24 22.624Z'},
+  {n:'Perplexity',p:'M22.3977 7.0896h-2.3106V.0676l-7.5094 6.3542V.1577h-1.1554v6.1966L4.4904 0v7.0896H1.6023v10.3976h2.8882V24l6.932-6.3591v6.2005h1.1554v-6.0469l6.9318 6.1807v-6.4879h2.8882V7.0896zm-3.4657-4.531v4.531h-5.355l5.355-4.531zm-13.2862.0676 4.8691 4.4634H5.6458V2.6262zM2.7576 16.332V8.245h7.8476l-6.1149 6.1147v1.9723H2.7576zm2.8882 5.0404v-3.8852h.0001v-2.6488l5.7763-5.7764v7.0111l-5.7764 5.2993zm12.7086.0248-5.7766-5.1509V9.0618l5.7766 5.7766v6.5588zm2.8882-5.0652h-1.733v-1.9723L13.3948 8.245h7.8478v8.087z'},
+  {n:'Replicate',p:'M24 10.262v2.712h-9.518V24h-3.034V10.262zm0-5.131v2.717H8.755V24H5.722V5.131zM24 0v2.717H3.034V24H0V0z'},
+  {n:'ElevenLabs',p:'M4.6035 0v24h4.9317V0zm9.8613 0v24h4.9317V0z'},
+  {n:'ByteDance / 豆包',p:'M19.8772 1.4685L24 2.5326v18.9426l-4.1228 1.0563V1.4685zm-13.3481 9.428l4.115 1.0641v8.9786l-4.115 1.0642v-11.107zM0 2.572l4.115 1.0642v16.7354L0 21.428V2.572zm17.4553 5.6205v11.107l-4.1228-1.0642V9.2568l4.1228-1.0642z'},
+  {n:'xAI / Grok',p:'M14.234 10.162 22.977 0h-2.072l-7.591 8.824L7.251 0H.258l9.168 13.343L.258 24H2.33l8.016-9.318L16.749 24h6.993zm-2.837 3.299-.929-1.329L3.076 1.56h3.182l5.965 8.532.929 1.329 7.754 11.09h-3.182z'},
+  {n:'通义 / 阿里',p:'M14.391 16.22c-.963.044-.865-.459-.302-1.234 1.32-1.768 3.82-4.236 3.906-5.982.151-2.283-2.143-3.026-4.501-3.004-1.645.022-3.344.492-4.501.906C5 8.315 2.489 10.576.909 13.076-.768 15.554-.216 17.923 3.322 18c2.716-.109 4.48-.862 6.32-1.802.01 0-5.086 1.453-6.958.383l-.008-.002c-.193-.11-.404-.264-.457-.683-.012-.885 1.46-1.802 2.283-2.097v-1.533a5.374 5.374 0 0 0 1.955.366 5.378 5.378 0 0 0 3.472-1.265c.037.13.056.278.044.447h.371c.048-.394-.172-.706-.172-.706-.333-.529-.915-.52-.915-.52s.315.137.529.466a4.953 4.953 0 0 1-4.665.932l1.21-1.2-.336-.874c2.435-.852 4.48-1.507 7.812-2.085l-.746-.624.389-.24c2.01.568 3.325.985 3.253 2.051a2.672 2.672 0 0 1-.202.611c-.584 1.158-2.326 3.09-3.029 3.898-.465.535-.92 1.06-1.245 1.562-.335.503-.54.971-.551 1.42.043 3.504 10.334-1.64 12.324-3.003-2.943 1.266-6.113 2.489-9.609 2.718Z'},
+  {n:'腾讯',p:'M21.395 15.035a40 40 0 0 0-.803-2.264l-1.079-2.695c.001-.032.014-.562.014-.836C19.526 4.632 17.351 0 12 0S4.474 4.632 4.474 9.241c0 .274.013.804.014.836l-1.08 2.695a39 39 0 0 0-.802 2.264c-1.021 3.283-.69 4.643-.438 4.673.54.065 2.103-2.472 2.103-2.472 0 1.469.756 3.387 2.394 4.771-.612.188-1.363.479-1.845.835-.434.32-.379.646-.301.778.343.578 5.883.369 7.482.189 1.6.18 7.14.389 7.483-.189.078-.132.132-.458-.301-.778-.483-.356-1.233-.646-1.846-.836 1.637-1.384 2.393-3.302 2.393-4.771 0 0 1.563 2.537 2.103 2.472.251-.03.581-1.39-.438-4.673'},
+  {n:'知乎',p:'M5.721 0C2.251 0 0 2.25 0 5.719V18.28C0 21.751 2.252 24 5.721 24h12.56C21.751 24 24 21.75 24 18.281V5.72C24 2.249 21.75 0 18.281 0zm1.964 4.078c-.271.73-.5 1.434-.68 2.11h4.587c.545-.006.445 1.168.445 1.171H9.384a58.104 58.104 0 01-.112 3.797h2.712c.388.023.393 1.251.393 1.266H9.183a9.223 9.223 0 01-.408 2.102l.757-.604c.452.456 1.512 1.712 1.906 2.177.473.681.063 2.081.063 2.081l-2.794-3.382c-.653 2.518-1.845 3.607-1.845 3.607-.523.468-1.58.82-2.64.516 2.218-1.73 3.44-3.917 3.667-6.497H4.491c0-.015.197-1.243.806-1.266h2.71c.024-.32.086-3.254.086-3.797H6.598c-.136.406-.158.447-.268.753-.594 1.095-1.603 1.122-1.907 1.155.906-1.821 1.416-3.6 1.591-4.064.425-1.124 1.671-1.125 1.671-1.125zM13.078 6h6.377v11.33h-2.573l-2.184 1.373-.401-1.373h-1.219zm1.313 1.219v8.86h.623l.263.937 1.455-.938h1.456v-8.86z'},
+  {n:'Claude',p:'M12 2 3 20h3l1.6-3.4h8.8L18 20h3L12 2zm-3.1 11.6L12 7l3.1 6.6H8.9z'},
+  {n:'Hugging Face',p:'M12 2a10 10 0 1 0 0 20 10 10 0 0 0 0-20zm-3.5 7a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zm7 0a1.5 1.5 0 1 1 0 3 1.5 1.5 0 0 1 0-3zM7 15h10a5 5 0 0 1-10 0z'},
+  {n:'Ollama',p:'M12 2c-2 0-3.5 1.6-3.7 3.7C6.9 6.2 6 7.7 6 9.4c0 .9.3 1.8.8 2.5C6.3 12.8 6 13.9 6 15c0 3.3 2.7 6 6 6s6-2.7 6-6c0-1.1-.3-2.2-.8-3.1.5-.7.8-1.6.8-2.5 0-1.7-.9-3.2-2.3-3.7C15.5 3.6 14 2 12 2zm-2 12a1 1 0 1 1 0 2 1 1 0 0 1 0-2zm4 0a1 1 0 1 1 0 2 1 1 0 0 1 0-2z'},
+];
+
+const grid=document.getElementById('grid');
+
+/* ===== 按参考图 1:1 还原 =====
+   网格固定为 13 列 × 6 行（对应参考图的格子数）。
+   圆点坐标（[行, 列]，行/列均从 0 开始）严格按参考图圆点位置摆放：
+
+   参考图圆点分布（行1~3 是圆点区，行0/4/5 无圆点）：
+     行1：col2 |            col6 |        col9,col10
+     行2：col2 | col5,col6,col7 |        col9,col10
+     行3：col2,col3 |    col5 | col7 |   col9
+*/
+const GRID_COLS=13, GRID_ROWS=6;
+
+/* ===== 两个圆点状态，每 5 秒波浪式翻转切换 ===== */
+// 状态 A：LAP 图案 + 原标题
+const STATE_A={
+  dots:[
+    [1,2],           [1,6],            [1,9],[1,10],
+    [2,2],   [2,5],[2,6],[2,7],        [2,9],[2,10],
+    [3,2],[3,3],   [3,5],   [3,7],     [3,9],
+  ],
+  slashes:[
+    {row:1,col:5,deg:28},   // A 左撇（/）
+    {row:1,col:7,deg:-28},  // A 右撇（\）
+  ],
+  title:'AI-POWERED GAME ASSET<br>PRODUCTION PLATFORM',
+};
+// 状态 B：新图案 + 新标题（按第二张参考图）
+const STATE_B={
+  dots:[
+    [1,2],[1,3],   [1,5],[1,6],[1,7],       [1,9],[1,10],
+                   [2,6],[2,7],             [2,9],[2,10],
+    [3,2],[3,3],   [3,5],[3,6],[3,7],             [3,10],
+  ],
+  slashes:[],
+  title:'34×AI MODEL<br>HAVE ADDED IN LAP PLATFORM',
+};
+
+let curState=STATE_A;
+let dotSet=new Set(STATE_A.dots.map(d=>d[0]+','+d[1]));
+let SLASHES=STATE_A.slashes;
+
+/* ===== 游戏美术图（状态A悬停翻出，跨 1×1/2×2/3×3 格） ===== */
+const GAMES=['game1','game2','game3','game4','game5','game6','game7','game8','game9','game10','game11','game12','game13','game14','game15','game16'];
+// 预分配：给每个格子（作为左上角起点）分配一个图块尺寸(1/2/3)和图片，加载时固定
+let cellMap=[];        // cellMap[row][col] = cell 元素
+let blockMap=[];       // blockMap[row][col] = {size, img} 或 null（该格作为左上角起点的图块）
+
+function cellByRC(row,col){return (cellMap[row]&&cellMap[row][col])||null;}
+
+let cells=[];
+function build(){
+  // 正方形格子：格子边长 = 视口宽 / 13，网格宽度铺满视口，6 行高度随之确定
+  const cw=window.innerWidth;
+  const size=cw/GRID_COLS;
+  grid.style.gridTemplateColumns=`repeat(${GRID_COLS},${size}px)`;
+  grid.style.gridTemplateRows=`repeat(${GRID_ROWS},${size}px)`;
+  // 保留 headline（网格内的跨格标题），只清除动态生成的格子
+  const headline=grid.querySelector('.headline');
+  cells.forEach(c=>c.remove());
+  cells=[];
+  cellMap=[];for(let r=0;r<GRID_ROWS;r++)cellMap[r]=[];
+
+  for(let row=0;row<GRID_ROWS;row++){
+    for(let col=0;col<GRID_COLS;col++){
+      const cell=document.createElement('div');cell.className='cell';
+      cell.dataset.row=row;cell.dataset.col=col;
+      cellMap[row][col]=cell;
+      // 显式定位，避免与 headline 的跨格定位发生 auto-placement 冲突
+      cell.style.gridColumn=(col+1)+' / '+(col+2);
+      cell.style.gridRow=(row+1)+' / '+(row+2);
+      const flip=document.createElement('div');flip.className='flip';
+      const front=document.createElement('div');front.className='face front';
+      const back=document.createElement('div');back.className='face back';
+
+      // 正面的圆点/斜线容器（切换状态时更新其内容）
+      const deco=document.createElement('div');deco.className='deco';
+      deco.style.cssText='position:absolute;inset:0;display:grid;place-items:center';
+      front.appendChild(deco);
+
+      // 所有格子都藏一个 AI 大模型 logo，划过翻转露出（白底方格 + 纯黑内联 SVG logo）
+      {
+        const t=TOOLS[Math.floor(Math.random()*TOOLS.length)];
+        const card=document.createElement('div');card.className='logocard';
+        card.innerHTML='<svg class="glyph" viewBox="0 0 24 24" role="img" aria-label="'+t.n+'"><title>'+t.n+'</title><path d="'+t.p+'"/></svg>';
+        back.appendChild(card);
+        cell.dataset.logo='1';
+      }
+
+      flip.appendChild(front);flip.appendChild(back);cell.appendChild(flip);
+      grid.appendChild(cell);cells.push(cell);
+    }
+  }
+  applyDecoFor(curState); // 初始渲染当前状态的圆点/斜线
+  allocBlocks();          // 预分配游戏图块（1×1/2×2/3×3，不重叠）
+}
+
+/* 预分配：给格子随机分配游戏图块尺寸(1/2/3)，保证不重叠、不越界 */
+function allocBlocks(){
+  blockMap=[];
+  const occupied=[]; // occupied[r][c]=true 表示已被某图块占用
+  for(let r=0;r<GRID_ROWS;r++){blockMap[r]=[];occupied[r]=[];}
+  // 遍历所有格子，尝试放置图块
+  for(let r=0;r<GRID_ROWS;r++){
+    for(let c=0;c<GRID_COLS;c++){
+      if(occupied[r][c])continue;
+      // 随机尺寸：3格(约12%) / 2格(约30%) / 1格(其余)
+      const rnd=Math.random();
+      let size = rnd<0.12?3 : rnd<0.42?2 : 1;
+      // 检查 size×size 区域是否可放（不越界、不与已占用重叠）
+      while(size>1){
+        let ok=true;
+        if(r+size>GRID_ROWS||c+size>GRID_COLS)ok=false;
+        else{
+          for(let dr=0;dr<size&&ok;dr++)for(let dc=0;dc<size&&ok;dc++)if(occupied[r+dr][c+dc])ok=false;
+        }
+        if(ok)break; size--;
+      }
+      // 标记占用
+      for(let dr=0;dr<size;dr++)for(let dc=0;dc<size;dc++)occupied[r+dr][c+dc]=true;
+      // 记录图块（该格为左上角起点）
+      blockMap[r][c]={size,img:GAMES[Math.floor(Math.random()*GAMES.length)]};
+    }
+  }
+}
+
+/* 根据状态在各格子正面渲染圆点/斜线 */
+function decoAt(row,col,state){
+  const isDot=state.dots.some(d=>d[0]===row&&d[1]===col);
+  const sl=state.slashes.find(s=>s.row===row&&s.col===col);
+  return {isDot,sl};
+}
+function renderDeco(cell,state){
+  const row=+cell.dataset.row,col=+cell.dataset.col;
+  const deco=cell.querySelector('.deco');if(!deco)return;
+  deco.innerHTML='';
+  const {isDot,sl}=decoAt(row,col,state);
+  if(isDot){const d=document.createElement('div');d.className='dot';deco.appendChild(d);}
+  if(sl){const line=document.createElement('div');line.className='slash';line.style.transform=`rotate(${sl.deg}deg)`;deco.appendChild(line);}
+}
+function applyDecoFor(state){cells.forEach(c=>renderDeco(c,state));}
+build();
+addEventListener('resize',()=>{clearTimeout(window.__rt);window.__rt=setTimeout(build,250);});
+
+/* ===== 鼠标划过格子 → 翻转 =====
+   状态A：以悬停格所属图块的左上角为起点，翻出跨 1×1/2×2/3×3 的游戏图
+   状态B：单格翻转露出 AI logo（原逻辑） */
+
+// 找出包含 (row,col) 的图块起点（因为悬停的可能是图块内部的格子）
+function findBlockOrigin(row,col){
+  for(let r=Math.max(0,row-2);r<=row;r++){
+    for(let c=Math.max(0,col-2);c<=col;c++){
+      const b=blockMap[r]&&blockMap[r][c];
+      if(b && row<r+b.size && col<c+b.size) return {r,c,b};
+    }
+  }
+  return null;
+}
+
+let activeGameFlip=null;
+function showGameImage(row,col){
+  const origin=findBlockOrigin(row,col);if(!origin)return;
+  const {r,c,b}=origin;
+  const originCell=cellByRC(r,c);if(!originCell)return;
+  // 若已有相同图块在显示，不重复
+  if(activeGameFlip && activeGameFlip.dataset.key===r+'_'+c)return;
+  hideGameImage();
+
+  const size=cellByRC(0,0).getBoundingClientRect().width; // 格子边长
+  const gf=document.createElement('div');gf.className='gameflip';gf.dataset.key=r+'_'+c;
+  gf.style.width=(size*b.size)+'px';gf.style.height=(size*b.size)+'px';
+  // 定位到起点格子的位置（相对于 grid）
+  const gridRect=grid.getBoundingClientRect();
+  const cellRect=originCell.getBoundingClientRect();
+  gf.style.left=(cellRect.left-gridRect.left)+'px';
+  gf.style.top=(cellRect.top-gridRect.top)+'px';
+  gf.innerHTML='<div class="gfinner"><div class="gfimg"><img src="assets/games/'+b.img+'.png" alt="游戏美术"></div></div>';
+  grid.appendChild(gf);
+  activeGameFlip=gf;   // 瞬间出现
+}
+function hideGameImage(){
+  if(!activeGameFlip)return;
+  const gf=activeGameFlip;activeGameFlip=null;
+  setTimeout(()=>gf.remove(),500);   // 等 0.5 秒后瞬间消失
+}
+
+grid.addEventListener('mouseover',e=>{
+  const cell=e.target.closest('.cell');if(!cell)return;
+  const row=+cell.dataset.row,col=+cell.dataset.col;
+  if(curState===STATE_A){
+    showGameImage(row,col);
+  }else{
+    if(!cell.dataset.logo)return;
+    clearTimeout(cell.__t);
+    cell.classList.add('flipped');
+  }
+});
+grid.addEventListener('mouseout',e=>{
+  const cell=e.target.closest('.cell');if(!cell)return;
+  const to=e.relatedTarget;
+  if(to && cell.contains(to))return;
+  if(curState===STATE_A){
+    // 移出当前图块区域才隐藏
+    const toCell=to&&to.closest&&to.closest('.cell');
+    if(toCell){
+      const tr=+toCell.dataset.row,tc=+toCell.dataset.col;
+      const o1=findBlockOrigin(+cell.dataset.row,+cell.dataset.col);
+      const o2=findBlockOrigin(tr,tc);
+      if(o1&&o2&&o1.r===o2.r&&o1.c===o2.c)return; // 仍在同一图块内
+    }
+    hideGameImage();
+  }else{
+    clearTimeout(cell.__t);cell.__t=setTimeout(()=>cell.classList.remove('flipped'),150);
+  }
+});
+
+/* ===== 每 5 秒波浪式涟漪翻转，在两个圆点状态之间切换 ===== */
+const headlineText=document.getElementById('headlineText');
+
+
+function switchState(next){
+  hideGameImage(); // 切换前清掉可能残留的游戏图
+  // 所有格子按「左上 → 右下」对角线顺序翻转一遍（翻过去显示纯白，翻回来图案已更新）
+  const targets=cells.map(cell=>{
+    const row=+cell.dataset.row, col=+cell.dataset.col;
+    return {cell,order:row+col}; // 对角线波浪：row+col 越小越靠左上
+  });
+  targets.sort((a,b)=>a.order-b.order);
+
+  // 标题淡出→换字→淡入（跟随波浪节奏，在中途换字）
+  headlineText.classList.add('fading');
+  setTimeout(()=>{headlineText.innerHTML=next.title;headlineText.classList.remove('fading');},500);
+
+  // 逐个格子翻转：翻到中途更新正面圆点为新状态，随后翻回
+  targets.forEach((t,i)=>{
+    const delay=i*22; // 对角线波浪间隔
+    setTimeout(()=>{
+      const cell=t.cell;
+      if(cell.matches(':hover'))return; // 手动悬停中的格子跳过，互不干扰
+      cell.classList.add('auto-flip');
+      // 翻到一半时更新正面圆点为新状态
+      setTimeout(()=>renderDeco(cell,next),200);
+      // 翻回
+      setTimeout(()=>cell.classList.remove('auto-flip'),400);
+    },delay);
+  });
+
+  // 更新当前状态
+  curState=next;
+  dotSet=new Set(next.dots.map(d=>d[0]+','+d[1]));
+  SLASHES=next.slashes;
+}
+
+// 鼠标悬停在网格上时暂停自动切换，移开后恢复
+let hoverPaused=false;
+grid.addEventListener('mouseenter',()=>hoverPaused=true);
+grid.addEventListener('mouseleave',()=>hoverPaused=false);
+
+setInterval(()=>{
+  if(hoverPaused)return; // 鼠标在网格上，暂不切换
+  switchState(curState===STATE_A?STATE_B:STATE_A);
+},10000);
+
+/* ===== 首屏自动示范：鼠标不在网格上时自动挑格子演示翻转，引导发现交互 =====
+   鼠标悬停网格时暂停（由 hoverPaused 控制），移出网格后自动恢复 */
+let demoCell=null;      // 当前示范中翻转的单格（状态B用）
+// 鼠标进入网格时清理示范残留，避免与手动操作冲突
+grid.addEventListener('mouseenter',()=>{
+  hideGameImage();
+  if(demoCell){demoCell.classList.remove('flipped');demoCell=null;}
+});
+
+function runDemoTick(){
+  if(hoverPaused)return; // 鼠标在网格上，暂停示范
+  if(curState===STATE_A){
+    // 随机挑一个图块起点，翻出游戏图
+    const origins=[];
+    for(let r=0;r<GRID_ROWS;r++)for(let c=0;c<GRID_COLS;c++)if(blockMap[r]&&blockMap[r][c])origins.push([r,c]);
+    if(origins.length){
+      const [r,c]=origins[Math.floor(Math.random()*origins.length)];
+      showGameImage(r,c);
+      setTimeout(()=>{if(!hoverPaused)hideGameImage();},1400); // 停留后收起
+    }
+  }else{
+    // 随机挑一个格子翻出 logo
+    const pool=cells.filter(c=>c.dataset.logo);
+    if(pool.length){
+      const cell=pool[Math.floor(Math.random()*pool.length)];
+      if(demoCell)demoCell.classList.remove('flipped');
+      demoCell=cell;cell.classList.add('flipped');
+      setTimeout(()=>{if(demoCell===cell){cell.classList.remove('flipped');demoCell=null;}},1400);
+    }
+  }
+}
+// 页面加载稍作停顿后开始示范，之后每 1.9 秒演示一次（由 hoverPaused 控制暂停/恢复，不会永久停止）
+let demoTimer;
+setTimeout(()=>{ runDemoTick(); demoTimer=setInterval(runDemoTick,1900); },1200);
+
+/* ===== 滚动叙事：PROMPT → IMAGE 转场（GSAP ScrollTrigger + Lenis） ===== */
+(function initStory(){
+  if(typeof gsap==='undefined'||typeof ScrollTrigger==='undefined'){
+    // 库没加载：兜底直接显示 IMAGE
+    return;
+  }
+  gsap.registerPlugin(ScrollTrigger);
+
+  // Lenis 平滑滚动（可选）
+  let lenis=null;
+  const LenisCtor=window.Lenis||(window.lenis&&window.lenis.default)||(typeof Lenis!=='undefined'?Lenis:null);
+  if(LenisCtor){
+    try{
+      lenis=new LenisCtor({duration:1.1,easing:t=>Math.min(1,1.001-Math.pow(2,-10*t)),smoothWheel:true});
+      lenis.on('scroll',ScrollTrigger.update);
+      gsap.ticker.add(t=>lenis.raf(t*1000));
+      gsap.ticker.lagSmoothing(0);
+    }catch(e){lenis=null;}
+  }
+
+  const imageSec=document.getElementById('imageSec');
+  const modelSec=document.getElementById('modelSec');
+  const uiSec=document.getElementById('uiSec');
+  const workflowSec=document.getElementById('workflowSec');
+  const watcherStage=document.getElementById('watcherStage');
+  const watcherCanvas=document.getElementById('watcherCanvas');
+  const watcherEyes=document.getElementById('watcherEyes');
+  const promptSec=document.getElementById('prompt');
+  const promptInput=document.getElementById('promptInput');
+  const promptText=promptInput.querySelector('span');
+  const promptArrow=promptInput.querySelector('.pi-arrow');
+  const modelVideoWrap=document.getElementById('modelVideoWrap');
+  const modelFrame=document.getElementById('modelFrame');
+  const modelStill=document.getElementById('modelStill');
+  const animationVideo=document.getElementById('animationVideo');
+  const runRockLayer=document.getElementById('runRockLayer');
+  const limeConnector=document.getElementById('limeConnector');
+
+  // 计算输入框放大到铺满屏所需的目标尺寸（放大 1.25 倍留余量）
+  function coverSize(){
+    return {w:innerWidth*1.25,h:innerHeight*1.25};
+  }
+
+  // 时间轴：三段清晰
+  // 0~0.55  第一部分中间的那个输入框自己放大（宽高撑开、圆角变直角、文字淡出）
+  // 0.10~0.35 PROMPT 其它内容（序号/空心字）淡出
+  // 0.5~1  白底输入框已铺满屏，IMAGE 内容在其上淡入
+  const tl=gsap.timeline({
+    scrollTrigger:{
+      trigger:'#story',
+      start:'top top',
+      end:'+=12200',
+      scrub:1,
+      pin:'.story-pin',
+      anticipatePin:1,
+      invalidateOnRefresh:true
+    }
+  });
+
+  // 段1：真实输入框放大 → 变成铺满屏的白色矩形
+  tl.set(promptInput,{x:0,y:0,xPercent:-50,yPercent:-50,left:'50%',top:'50%'},0);
+  tl.to([promptText,promptArrow],{opacity:0,duration:0.12,ease:'power1.in'},0);
+  tl.to(promptInput,{
+    width:()=>coverSize().w+'px',
+    height:()=>coverSize().h+'px',
+    x:0,y:0,xPercent:-50,yPercent:-50,
+    borderRadius:0,
+    boxShadow:'0 0 0 rgba(0,0,0,0)',
+    padding:0,
+    ease:'power2.inOut',
+    duration:0.55
+  },0);
+  // 段2：PROMPT 其它内容（序号标题 + 空心字）淡出
+  tl.to(promptSec.querySelector('.prompt-head'),{opacity:0,duration:0.2},0.1);
+  tl.to(promptSec.querySelector('.bigword'),{opacity:0,duration:0.2},0.15);
+  // 段3：白底已铺满，IMAGE 内容淡入（image-sec z-index 高于放大后的输入框）
+  //  用 fromTo 明确两端，避免 from 在图片加载/refresh 后记录到错误的"当前值"导致内容卡在隐藏态
+  tl.to(imageSec,{opacity:1,duration:0.3},0.5);
+  tl.fromTo(imageSec.querySelector('.prompt-head'),{y:-20,opacity:0},{y:0,opacity:1,duration:0.25},0.58);
+  tl.fromTo(imageSec.querySelector('.bigword'),{scale:1.15,opacity:0},{scale:1,opacity:1,duration:0.3},0.58);
+  // 四张角色视图：全部纳入「差动/连动」队列，从屏幕右侧向左依次滑入
+  //  差动关键：单张动画较长(0.7)但相邻错开很小(0.12)，形成大幅重叠的波浪拖尾，而非一张动完再动下一张
+  const figs=imageSec.querySelectorAll('.image-figures .fig');
+  const poseBars=imageSec.querySelectorAll('.image-figures .pose-bar');
+  // 第三部分静态大图和后续序列帧分开定位：只调静态大图时，不影响序列帧锚点
+  const modelHeroX=0.552;
+  const modelSequenceAnchorX=0.535;
+  const storyPin=document.querySelector('.story-pin');
+  function rectInStory(el){
+    if(!el||!storyPin)return {left:0,top:0,width:1,height:1};
+    const host=storyPin.getBoundingClientRect();
+    const r=el.getBoundingClientRect();
+    return {left:r.left-host.left,top:r.top-host.top,width:r.width,height:r.height};
+  }
+  function setConnectorTo(el){
+    if(limeConnector)gsap.set(limeConnector,rectInStory(el));
+  }
+  tl.fromTo(figs,
+    {x:()=>innerWidth*0.9,opacity:0},
+    {x:0,opacity:1,ease:'power3.out',duration:0.7,stagger:0.12},0.62);
+  tl.fromTo(poseBars,
+    {x:()=>innerWidth*0.9,opacity:0},
+    {x:0,opacity:1,ease:'power3.out',duration:0.7,stagger:0.12},0.68);
+
+  // 段4：IMAGE → 3D。第一张图先随滚动水平移动到右侧，再继续随滚动逐渐放大
+  tl.to(imageSec.querySelector('.prompt-head'),{opacity:0,y:-18,duration:0.28},1.78);
+  tl.to(imageSec.querySelector('.bigword'),{opacity:0,scale:0.92,duration:0.28},1.78);
+  tl.to(poseBars,{opacity:0,duration:0.22,ease:'power1.inOut'},1.74);
+  tl.to([figs[1],figs[2],figs[3]],{x:-80,opacity:0,duration:0.36,ease:'power2.inOut'},1.78);
+  tl.set(figs[0],{transformOrigin:'center top'},1.78);
+  // 先只做水平位移：移动到画面右侧，保持当前大小
+  tl.to(figs[0],{
+    x:()=>innerWidth*modelHeroX,
+    y:0,
+    scale:1,
+    duration:0.68,
+    ease:'power2.inOut'
+  },1.86);
+  // 再继续放大：只在放大阶段轻微上移，避免第一段水平移动变成斜向移动
+  tl.to(figs[0],{
+    scale:2.5,
+    y:-120,
+    duration:0.9,
+    ease:'power3.inOut'
+  },2.54);
+  tl.to(modelSec,{opacity:1,duration:0.25},2.42);
+  tl.fromTo(modelSec.querySelector('.prompt-head'),{y:-18,opacity:0},{y:0,opacity:1,duration:0.32},2.5);
+  tl.fromTo(modelSec.querySelector('.model-word'),{x:-35,opacity:0},{x:0,opacity:1,duration:0.42,ease:'power2.out'},2.62);
+
+  // 段5：继续下滚时，视频替换右侧人物图；视频时间由滚动进度控制，滚动停止即停在当前帧
+  const videoStart=3.65;
+  const videoEnd=6.85;
+  function getModelVideoRect(progress){
+    if(!figs[0])return {left:0,top:0,width:1,height:1};
+    const host=modelSec.getBoundingClientRect();
+    const r=figs[0].getBoundingClientRect();
+    const scale=1.377;
+    const w=r.width*scale,h=r.height*scale;
+    const sequenceCompensate=(host.width||innerWidth)*(modelHeroX-modelSequenceAnchorX);
+    const baseLeft=r.left-host.left-(w-r.width)/2+10-sequenceCompensate;
+    const baseTop=r.top-host.top-(h-r.height)/2+17;
+    // 视频段继续滚动时，右侧视频整体慢慢上移；到最后一帧时，视频底部稍低，避免画面太靠上
+    const endLowerOffset=200;
+    const maxUp=Math.max(0,baseTop+h-(host.height||innerHeight)-endLowerOffset);
+    const p=Math.max(0,Math.min(1,progress));
+    return {left:baseLeft,top:baseTop-maxUp*p,width:w,height:h};
+  }
+  function getAnimationRect(){
+    const host=modelSec.getBoundingClientRect();
+    const hostW=host.width||innerWidth;
+    const hostH=host.height||innerHeight;
+    const h=hostH*.86;
+    const w=h*.438;
+    return {left:hostW*.71-w/2,top:hostH*.08+30,width:w,height:h};
+  }
+  function alignModelVideoToFig(){
+    if(!modelVideoWrap)return;
+    const p=Math.max(0,Math.min(1,(tl.time()-videoStart)/(videoEnd-videoStart)));
+    gsap.set(modelVideoWrap,getModelVideoRect(p));
+  }
+  function getAnimationStartRect(){
+    const r=getModelVideoRect(1);
+    const scale=.714;
+    const w=r.width*scale,h=r.height*scale;
+    return {left:r.left+(r.width-w)/2+10,top:r.top+(r.height-h)/2-5,width:w,height:h};
+  }
+  function alignAnimationImage(){
+    if(!modelVideoWrap)return;
+    gsap.set(modelVideoWrap,getAnimationRect());
+  }
+  tl.call(alignModelVideoToFig,null,3.5);
+  // 图片瞬间消失，视频帧瞬间出现，不做渐入渐出
+  tl.set(modelVideoWrap,{opacity:1},3.55);
+  tl.set(modelFrame,{opacity:1},3.55);
+  tl.set(modelStill,{opacity:0},3.55);
+  tl.set(figs[0],{opacity:0},3.55);
+  // 保留一段时间轴长度给帧序列 scrub。把视频解成 JPG 帧后按滚动进度切帧，比 MP4 currentTime seek 更流畅、上下滚速率也更一致。
+  tl.to({}, {duration:videoEnd-videoStart}, videoStart);
+
+  const frameCount=147;
+  const frameBase='assets/video-frames/frame_';
+  const frameExt='.jpg';
+  const uiStart=7.08;
+  const animationVideoStart=8.18;
+  const animationLoopStart=2.3;
+  const modelInfoBar=document.querySelector('.model-info-bar');
+  const uiLimePanel=uiSec.querySelector('.ui-lime-panel');
+  if(limeConnector){
+    tl.call(()=>setConnectorTo(poseBars[0]),null,1.42);
+    tl.set(limeConnector,{opacity:1,rotation:0,zIndex:22},1.42);
+    // 第二部分第一根竖条 → 第三部分底部信息条：始终顺时针旋转，同时拉伸变形，结束时转满一圈回到正向
+    tl.set(limeConnector,{zIndex:22,rotation:0},1.74);
+    tl.to(limeConnector,{
+      left:()=>rectInStory(modelInfoBar).left,
+      top:()=>rectInStory(modelInfoBar).top,
+      width:()=>rectInStory(modelInfoBar).width,
+      height:()=>rectInStory(modelInfoBar).height,
+      rotation:180,
+      duration:.88,
+      ease:'power2.inOut'
+    },1.74);
+    // 第三部分底部信息条 → 第四部分左侧绿色条：始终逆时针旋转，同时拉伸变形，结束时转满一圈回到正向
+    tl.set(limeConnector,{zIndex:22,rotation:0},uiStart);
+    tl.to(limeConnector,{
+      left:()=>rectInStory(uiLimePanel).left,
+      top:()=>rectInStory(uiLimePanel).top,
+      width:()=>rectInStory(uiLimePanel).width,
+      height:()=>rectInStory(uiLimePanel).height,
+      rotation:-180,
+      duration:.88,
+      ease:'power2.inOut'
+    },uiStart);
+    tl.set(limeConnector,{zIndex:10},uiStart+1.0);
+  }
+  tl.fromTo(modelInfoBar,{y:28,opacity:0},{y:0,opacity:1,duration:0.38,ease:'power2.out'},2.72);
+  let currentFrame=-1;
+  let animationStarted=false;
+  let workflowActive=false;
+  function frameSrc(index){
+    return frameBase+String(index+1).padStart(4,'0')+frameExt;
+  }
+  function preloadFrames(){
+    for(let i=0;i<frameCount;i++){
+      const img=new Image();
+      img.src=frameSrc(i);
+    }
+  }
+  let rockTimer=null;
+  function spawnRunRock(){
+    if(!runRockLayer)return;
+    const rock=document.createElement('i');
+    rock.className='run-rock';
+    const size=10+Math.random()*18;
+    rock.style.width=size+'px';
+    rock.style.height=(size*(.55+Math.random()*.35))+'px';
+    rock.style.left=(18+Math.random()*18)+'%';
+    rock.style.bottom=(13+Math.random()*18)+'%';
+    rock.style.setProperty('--rx',(-18-Math.random()*58)+'px');
+    rock.style.setProperty('--ry',(-24-Math.random()*70)+'px');
+    rock.style.setProperty('--rr',(-45+Math.random()*90)+'deg');
+    runRockLayer.appendChild(rock);
+    rock.addEventListener('animationend',()=>rock.remove(),{once:true});
+  }
+  function startRunRocks(){
+    if(rockTimer)return;
+    spawnRunRock();
+    rockTimer=setInterval(spawnRunRock,145);
+  }
+  function stopRunRocks(){
+    clearInterval(rockTimer);
+    rockTimer=null;
+    if(runRockLayer)runRockLayer.innerHTML='';
+  }
+  function syncModelVideo(){
+    const t=tl.time();
+    if(workflowActive){
+      if(animationVideo){animationVideo.pause();gsap.set(animationVideo,{opacity:0});}
+      stopRunRocks();
+      return;
+    }
+    if(t>=uiStart){
+      if(t>=uiStart+.95)alignAnimationImage();
+      if(animationVideo&&t>=animationVideoStart){
+        gsap.set(animationVideo,{opacity:1});
+        gsap.set(modelStill,{opacity:0});
+        if(!animationStarted){
+          animationStarted=true;
+          try{animationVideo.currentTime=0;}catch(e){}
+        }
+        // 开始播放后保持循环播放；循环回跳点从第 2 秒开始，只有明显往回滚离开触发点时才恢复为静态图片
+        animationVideo.loop=false;
+        if(animationVideo.paused){
+          const p=animationVideo.play();
+          if(p&&p.catch)p.catch(()=>{});
+        }
+        startRunRocks();
+      }else{
+        if(animationVideo){
+          animationVideo.pause();
+          gsap.set(animationVideo,{opacity:0});
+          // 只有明显回滚离开触发点时才重置，避免 scrub 轻微回弹导致视频播一会又跳回开头
+          if(t<animationVideoStart-.25){
+            animationStarted=false;
+            try{animationVideo.currentTime=0;}catch(e){}
+          }
+        }
+        stopRunRocks();
+        gsap.set(modelStill,{opacity:1});
+      }
+      return;
+    }
+    stopRunRocks();
+    if(t>=3.45)alignModelVideoToFig();
+    if(!modelFrame)return;
+    // 从第 4 部分回滚回来时，强制恢复第三部分序列帧可见，隐藏第四部分静态图
+    gsap.set(modelFrame,{opacity:1});
+    gsap.set(modelStill,{opacity:0});
+    let p=0;
+    if(t<=videoStart)p=0;
+    else if(t>=videoEnd)p=1;
+    else p=(t-videoStart)/(videoEnd-videoStart);
+    const index=Math.max(0,Math.min(frameCount-1,Math.round(p*(frameCount-1))));
+    if(index!==currentFrame){
+      currentFrame=index;
+      modelFrame.src=frameSrc(index);
+    }
+  }
+  tl.eventCallback('onUpdate',syncModelVideo);
+  preloadFrames();
+
+  // 段6：3D → ANIMATION。尾帧瞬间消失，第四部分人物图瞬间出现；随后人物图随滚动下移并缩小
+  tl.call(()=>{
+    gsap.set(modelVideoWrap,getAnimationStartRect());
+    if(modelFrame)modelFrame.src=frameSrc(frameCount-1);
+  },null,uiStart);
+  // 瞬间切换：尾帧消失，第四部分静态人物图出现
+  tl.set(modelFrame,{opacity:0},uiStart);
+  tl.set(modelStill,{opacity:1},uiStart);
+  tl.to(modelVideoWrap,{
+    left:()=>getAnimationRect().left,
+    top:()=>getAnimationRect().top,
+    width:()=>getAnimationRect().width,
+    height:()=>getAnimationRect().height,
+    duration:.95,
+    ease:'power2.inOut'
+  },uiStart);
+  tl.to([modelSec.querySelector('.prompt-head'),modelSec.querySelector('.model-word'),modelInfoBar],{opacity:0,duration:0.28},uiStart);
+  tl.to(uiSec,{opacity:1,duration:0.35,ease:'power1.out'},uiStart);
+  tl.set(uiSec.querySelector('.ui-lime-panel'),{x:0,opacity:0},uiStart);
+  tl.fromTo(uiSec.querySelector('.prompt-head'),{y:-18,opacity:0},{y:0,opacity:1,duration:0.32},uiStart+0.12);
+  tl.fromTo(uiSec.querySelector('.ui-word'),{x:-35,opacity:0},{x:0,opacity:1,duration:0.42,ease:'power2.out'},uiStart+0.22);
+  tl.fromTo(uiSec.querySelector('.action-icons'),{y:24,opacity:0},{y:0,opacity:1,duration:0.38,ease:'power2.out'},uiStart+0.36);
+  // 第四部分最后：静态人物图切换为新视频并自动播放；具体播放/重置由 syncModelVideo 统一管理，避免 scrub 回弹造成反复从头播放
+  tl.to({}, {duration:1.1}, animationVideoStart);
+
+  // 第五部分：WORKFLOW 位于第四部分下方；到达该屏后 pin 住，节点横向逐个出现，整条链条随滚动左移露出更多节点
+  if(workflowSec){
+    const wfCanvas=workflowSec.querySelector('.workflow-canvas');
+    const wfTl=gsap.timeline({
+      scrollTrigger:{
+        trigger:workflowSec,
+        start:'top top',
+        end:'+=2600',
+        scrub:1,
+        pin:true,
+        anticipatePin:1,
+        onEnter:()=>{workflowActive=true;if(animationVideo){animationVideo.pause();gsap.set(animationVideo,{opacity:0});}stopRunRocks();},
+        onEnterBack:()=>{workflowActive=true;if(animationVideo){animationVideo.pause();gsap.set(animationVideo,{opacity:0});}stopRunRocks();},
+        onLeaveBack:()=>{workflowActive=false;}
+      }
+    });
+    wfTl.fromTo(workflowSec.querySelectorAll('.wf-node'),
+      {x:-70,opacity:0},
+      {x:0,opacity:1,duration:.42,stagger:.16,ease:'power2.out'},.08);
+    wfTl.fromTo(workflowSec.querySelectorAll('.wf-line'),
+      {scaleX:0,opacity:0},
+      {scaleX:1,opacity:.85,duration:.34,stagger:.13,ease:'power1.out'},.28);
+    // 横向滑动到第 7 个节点完整露出后停止；按实际视口宽度计算终点，避免宽屏继续多滑
+    const wfViewport=workflowSec.querySelector('.workflow-viewport');
+    const wfLastNode=workflowSec.querySelector('.wf-n7');
+    function workflowEndX(){
+      const viewportW=wfViewport.getBoundingClientRect().width;
+      const canvasLeft=parseFloat(getComputedStyle(wfCanvas).left)||0;
+      const lastRight=canvasLeft+wfLastNode.offsetLeft+wfLastNode.offsetWidth;
+      return -Math.max(0,lastRight-viewportW+24);
+    }
+    wfTl.to(wfCanvas,{x:workflowEndX,duration:1.05,ease:'none'},.86);
+    wfTl.to({}, {duration:.35}, 1.91);
+  }
+
+  if(watcherStage&&watcherCanvas&&watcherEyes&&window.THREE){
+    const renderer=new THREE.WebGLRenderer({canvas:watcherCanvas,alpha:true,antialias:true});
+    renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+    const scene=new THREE.Scene();
+    const camera=new THREE.PerspectiveCamera(34,1,.1,20);
+    camera.position.z=4.2;
+    const uniforms={uTime:{value:0},uLook:{value:new THREE.Vector2(0,0)}};
+    const sphere=new THREE.Mesh(
+      new THREE.SphereGeometry(0.78,64,64),
+      new THREE.ShaderMaterial({
+        transparent:true,
+        uniforms,
+        vertexShader:`varying vec2 vUv;varying vec3 vNormal;varying vec3 vPos;void main(){vUv=uv;vNormal=normalize(normalMatrix*normal);vPos=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
+        fragmentShader:`precision highp float;uniform float uTime;uniform vec2 uLook;varying vec2 vUv;varying vec3 vNormal;varying vec3 vPos;float hash(vec3 p){return fract(sin(dot(p,vec3(127.1,311.7,74.7)))*43758.5453);}float noise(vec3 p){vec3 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);float n000=hash(i),n100=hash(i+vec3(1,0,0)),n010=hash(i+vec3(0,1,0)),n110=hash(i+vec3(1,1,0));float n001=hash(i+vec3(0,0,1)),n101=hash(i+vec3(1,0,1)),n011=hash(i+vec3(0,1,1)),n111=hash(i+vec3(1,1,1));float nx00=mix(n000,n100,f.x),nx10=mix(n010,n110,f.x),nx01=mix(n001,n101,f.x),nx11=mix(n011,n111,f.x);return mix(mix(nx00,nx10,f.y),mix(nx01,nx11,f.y),f.z);}float fbm(vec3 p){float v=0.,a=.5;for(int i=0;i<3;i++){v+=a*noise(p);p=p*1.86+vec3(8.3,5.1,3.7);a*=.5;}return v;}void main(){float t=uTime;vec3 p=normalize(vPos);vec3 q=p+vec3(uLook*.06,0.0);q+=.12*vec3(sin(t*.18+p.y*2.3),cos(t*.16+p.z*2.1),sin(t*.14+p.x*2.7));float n1=fbm(q*1.55+vec3(t*.10,-t*.08,t*.06));float n2=fbm(q*2.35+vec3(-t*.07,t*.11,-t*.05));float cloud=smoothstep(.18,.95,n1*.68+n2*.38);cloud*=smoothstep(.95,.16,length(vPos));vec3 base=vec3(.62,.90,1.0);vec3 col=mix(vec3(.96,.98,1.0),base,cloud*.68);col*=.68+cloud*.28;float breath=.86+.14*sin(t*1.85);float alpha=(.38+cloud*.48)*smoothstep(1.0,.18,length(vPos))*breath;gl_FragColor=vec4(col,alpha);}`,
+        depthWrite:false
+      })
+    );
+    scene.add(sphere);
+    const glass=new THREE.Mesh(
+      new THREE.SphereGeometry(1.205,128,128),
+      new THREE.ShaderMaterial({
+        transparent:true,
+        depthWrite:false,
+        side:THREE.DoubleSide,
+        uniforms,
+        vertexShader:`varying vec2 vUv;varying vec3 vNormal;void main(){vUv=uv;vNormal=normalize(normalMatrix*normal);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}`,
+        fragmentShader:`precision highp float;uniform float uTime;uniform vec2 uLook;varying vec2 vUv;varying vec3 vNormal;void main(){float fres=pow(1.0-abs(vNormal.z),1.65);float glint=pow(max(dot(normalize(vNormal),normalize(vec3(-.42,.72,.55))),0.0),64.0);vec3 col=vec3(1.0)*fres*.92+vec3(1.0)*glint*.48;float alpha=fres*.56+glint*.32;gl_FragColor=vec4(col,alpha);}`
+      })
+    );
+    scene.add(glass);
+    function sizeWatcher(){
+      const s=Math.min(watcherStage.clientWidth,watcherStage.clientHeight,380);
+      renderer.setSize(s,s,false);
+      camera.aspect=1;
+      camera.updateProjectionMatrix();
+    }
+    sizeWatcher();
+    addEventListener('resize',sizeWatcher);
+    let targetX=0,targetY=0,eyeX=0,eyeY=0;
+    addEventListener('mousemove',e=>{
+      const r=watcherStage.getBoundingClientRect();
+      const cx=r.left+r.width/2;
+      const cy=r.top+r.height/2;
+      const dx=e.clientX-cx;
+      const dy=e.clientY-cy;
+      const len=Math.hypot(dx,dy)||1;
+      const strength=Math.min(1,len/300);
+      targetX=dx/len*52*strength;
+      targetY=dy/len*40*strength;
+    });
+    const clock=new THREE.Clock();
+    let watcherVisible=false;
+    let watcherRendering=false;
+    function renderWatcher(){
+      if(!watcherVisible){watcherRendering=false;return;}
+      const t=clock.getElapsedTime();
+      eyeX+=(targetX-eyeX)*.14;
+      eyeY+=(targetY-eyeY)*.14;
+      watcherStage.style.setProperty('--eye-x',eyeX.toFixed(2)+'px');
+      watcherStage.style.setProperty('--eye-y',eyeY.toFixed(2)+'px');
+      uniforms.uTime.value=t;
+      uniforms.uLook.value.set(eyeX/52,eyeY/40);
+      sphere.rotation.y=t*.18+eyeX*.004;
+      sphere.rotation.x=eyeY*.003;
+      glass.rotation.y=-t*.08;
+      renderer.render(scene,camera);
+      requestAnimationFrame(renderWatcher);
+    }
+    function startWatcherRender(){
+      if(watcherRendering)return;
+      watcherRendering=true;
+      renderWatcher();
+    }
+    if('IntersectionObserver' in window){
+      const watcherObserver=new IntersectionObserver(entries=>{
+        watcherVisible=entries[0].isIntersecting;
+        if(watcherVisible)startWatcherRender();
+      },{threshold:.08});
+      watcherObserver.observe(watcherStage);
+    }else{
+      watcherVisible=true;
+      startWatcherRender();
+    }
+    function scheduleBlink(){
+      const delay=700+Math.random()*1600;
+      setTimeout(()=>{
+        watcherEyes.classList.add('blink');
+        setTimeout(()=>watcherEyes.classList.remove('blink'),120);
+        scheduleBlink();
+      },delay);
+    }
+    scheduleBlink();
+  }
+
+  // ⑦ ASSET 屏：像真实魔方一样“逐层转动”的纯色立体魔方（3×3×3）
+  const assetSec=document.getElementById('assetSec');
+  const assetCanvas=document.getElementById('assetCanvas');
+  const assetPoints=document.getElementById('assetPoints');
+  if(assetSec&&assetCanvas&&window.THREE){
+    const aRenderer=new THREE.WebGLRenderer({canvas:assetCanvas,alpha:true,antialias:true});
+    aRenderer.setPixelRatio(Math.min(devicePixelRatio,1.5));
+    const aScene=new THREE.Scene();
+    const aCamera=new THREE.PerspectiveCamera(30,1,.1,80);
+    // 相机方向固定为等距斜视，距离在 sizeAsset() 中按视野自适应，保证魔方完整不裁切
+    aCamera.lookAt(0,0,0);
+    // 灯光：柔和环境光 + 主光营造纯色立体感
+    aScene.add(new THREE.AmbientLight(0xffffff,.55));
+    const keyLight=new THREE.DirectionalLight(0xffffff,.95);keyLight.position.set(5,7,6);aScene.add(keyLight);
+    const rimLight=new THREE.DirectionalLight(0xffffff,.28);rimLight.position.set(-6,-3,-4);aScene.add(rimLight);
+    // cubeRoot：整体自转容器
+    const cubeRoot=new THREE.Group();
+    aScene.add(cubeRoot);
+    const GAP=1.04;                       // 小方块中心间距（决定层的坐标 -GAP/0/+GAP）
+    const geo=new THREE.BoxGeometry(0.96,0.96,0.96);
+    const mat=new THREE.MeshStandardMaterial({color:0xeef0ec,roughness:.42,metalness:.12});
+    const cubes=[];
+    for(let x=-1;x<=1;x++)for(let y=-1;y<=1;y++)for(let z=-1;z<=1;z++){
+      const m=new THREE.Mesh(geo,mat);
+      m.position.set(x*GAP,y*GAP,z*GAP);
+      m.quaternion.identity();
+      m.userData={gx:x,gy:y,gz:z};   // 逻辑网格坐标（-1/0/1）
+      cubeRoot.add(m);
+      cubes.push(m);
+    }
+    // 魔方旋转时的最大外接球半径（角块甩到最远时约 2.75），留出安全边距
+    const CUBE_RADIUS=2.75;
+    const FIT_MARGIN=1.05;                 // >1 留白边距（越小魔方越大）
+    const camDir=new THREE.Vector3(6.6,5.4,8.6).normalize();
+    function sizeAsset(){
+      // 用 canvas 的真实显示宽高（非强制正方形），避免内容被拉伸后裁切
+      const w=assetCanvas.clientWidth||520;
+      const h=assetCanvas.clientHeight||520;
+      aRenderer.setSize(w,h,false);
+      const aspect=w/h;
+      aCamera.aspect=aspect;
+      // 根据竖直视野 + 水平视野中较“紧”的一侧计算能完整容纳外接球所需的相机距离
+      const vFov=aCamera.fov*Math.PI/180;
+      const distV=CUBE_RADIUS/Math.sin(vFov/2);
+      const hFov=2*Math.atan(Math.tan(vFov/2)*aspect);
+      const distH=CUBE_RADIUS/Math.sin(hFov/2);
+      const dist=Math.max(distV,distH)*FIT_MARGIN;
+      aCamera.position.copy(camDir).multiplyScalar(dist);
+      aCamera.lookAt(0,0,0);
+      aCamera.updateProjectionMatrix();
+    }
+    sizeAsset();
+    addEventListener('resize',sizeAsset);
+
+    // ——— 魔方逐层转动状态机（纯四元数实现，不依赖 attach，兼容所有 three 版本）———
+    const AXES=[
+      {name:'x',key:'gx',vec:new THREE.Vector3(1,0,0)},
+      {name:'y',key:'gy',vec:new THREE.Vector3(0,1,0)},
+      {name:'z',key:'gz',vec:new THREE.Vector3(0,0,1)}
+    ];
+    const TURN_TIME=0.62;     // 单层旋转 90° 的时长（秒）
+    const PAUSE_TIME=0.30;    // 每次转动之间的停顿
+    let turn=null;            // 当前转动 {axis,dir,members[],elapsed}
+    let pauseLeft=PAUSE_TIME;
+    const _q=new THREE.Quaternion();
+    function easeInOut(p){return p<.5?4*p*p*p:1-Math.pow(-2*p+2,3)/2;}
+    function startTurn(){
+      const axis=AXES[(Math.random()*3)|0];
+      const layer=[-1,0,1][(Math.random()*3)|0];
+      const dir=Math.random()<.5?1:-1;   // 顺/逆时针
+      const members=[];
+      for(const c of cubes){
+        if(c.userData[axis.key]===layer){
+          // 缓存该方块转动前的初始状态
+          members.push({cube:c,pos0:c.position.clone(),quat0:c.quaternion.clone()});
+        }
+      }
+      turn={axis,dir,layer,members,elapsed:0};
+    }
+    function applyTurn(angle){
+      _q.setFromAxisAngle(turn.axis.vec,angle);
+      for(const m of turn.members){
+        // 位置绕轴心旋转
+        m.cube.position.copy(m.pos0).applyQuaternion(_q);
+        // 自身姿态：先施加层旋转，再乘初始姿态
+        m.cube.quaternion.copy(_q).multiply(m.quat0);
+      }
+    }
+    function finishTurn(){
+      // 精确吸附到 90° 并更新逻辑网格坐标
+      applyTurn(turn.dir*Math.PI/2);
+      for(const m of turn.members){
+        const c=m.cube;
+        const gx=Math.round(c.position.x/GAP),gy=Math.round(c.position.y/GAP),gz=Math.round(c.position.z/GAP);
+        c.position.set(gx*GAP,gy*GAP,gz*GAP);
+        c.userData.gx=gx;c.userData.gy=gy;c.userData.gz=gz;
+      }
+      turn=null;
+      pauseLeft=PAUSE_TIME;
+    }
+
+    const aClock=new THREE.Clock();
+    let assetVisible=false,assetRendering=false;
+    function renderAsset(){
+      if(!assetVisible){assetRendering=false;return;}
+      const dt=Math.min(aClock.getDelta(),0.05);
+      const t=aClock.elapsedTime;
+      // 整体缓慢自转，方便观察各个面
+      cubeRoot.rotation.y=t*.28;
+      cubeRoot.rotation.x=Math.sin(t*.2)*.32;
+      // 逐层转动逻辑
+      if(turn){
+        turn.elapsed+=dt;
+        const p=Math.min(1,turn.elapsed/TURN_TIME);
+        applyTurn(turn.dir*(Math.PI/2)*easeInOut(p));
+        if(p>=1)finishTurn();
+      }else{
+        pauseLeft-=dt;
+        if(pauseLeft<=0)startTurn();
+      }
+      aRenderer.render(aScene,aCamera);
+      requestAnimationFrame(renderAsset);
+    }
+    function startAssetRender(){if(assetRendering)return;assetRendering=true;aClock.getDelta();renderAsset();}
+    if('IntersectionObserver' in window){
+      const ob=new IntersectionObserver(es=>{assetVisible=es[0].isIntersecting;if(assetVisible)startAssetRender();},{threshold:.05});
+      ob.observe(assetSec);
+    }else{assetVisible=true;startAssetRender();}
+    // 右侧要点逐条入场
+    if(assetPoints&&window.gsap&&window.ScrollTrigger){
+      const pts=[...assetPoints.querySelectorAll('.asset-point')];
+      gsap.to(pts,{
+        opacity:1,x:0,duration:.7,ease:'power3.out',stagger:.22,
+        scrollTrigger:{trigger:assetSec,start:'top 62%'}
+      });
+    }
+  }
+
+  // ⑧ SECURITY 屏：可开合门的保险箱（Three.js）
+  const securitySec=document.getElementById('securitySec');
+  const securityCanvas=document.getElementById('securityCanvas');
+  const securityPoints=document.getElementById('securityPoints');
+  if(securitySec&&securityCanvas&&window.THREE){
+    const sRenderer=new THREE.WebGLRenderer({canvas:securityCanvas,alpha:true,antialias:true});
+    sRenderer.setPixelRatio(Math.min(devicePixelRatio,1.5));
+    const sScene=new THREE.Scene();
+    const sCamera=new THREE.PerspectiveCamera(30,1,.1,80);
+    sScene.add(new THREE.AmbientLight(0xffffff,.78));
+    const sKey=new THREE.DirectionalLight(0xffffff,1.15);sKey.position.set(4,6,7);sScene.add(sKey);
+    const sFill=new THREE.DirectionalLight(0xffffff,.5);sFill.position.set(-6,2,3);sScene.add(sFill);
+    const sRim=new THREE.DirectionalLight(0xffffff,.42);sRim.position.set(0,3,-6);sScene.add(sRim);
+    const sTop=new THREE.DirectionalLight(0xffffff,.4);sTop.position.set(0,8,1);sScene.add(sTop);
+
+    // 材质（银白色金属质感）
+    const bodyMat=new THREE.MeshStandardMaterial({color:0xd8dbe0,roughness:.34,metalness:.9});
+    const darkMat=new THREE.MeshStandardMaterial({color:0xb4b8bf,roughness:.42,metalness:.85});
+    const steelMat=new THREE.MeshStandardMaterial({color:0xeef0f3,roughness:.24,metalness:.95});
+    const steelDark=new THREE.MeshStandardMaterial({color:0xc2c6cd,roughness:.34,metalness:.9});
+    const padMat=new THREE.MeshStandardMaterial({color:0x3a3d42,roughness:.5,metalness:.5});
+    const keyMat=new THREE.MeshStandardMaterial({color:0x8b8f96,roughness:.45,metalness:.6});
+    const screenMat=new THREE.MeshStandardMaterial({color:0x0a1a0c,roughness:.4,metalness:.2,emissive:0x1f8a2a,emissiveIntensity:.9});
+
+    const safe=new THREE.Group();
+    sScene.add(safe);
+    // 尺寸
+    const W=3.0,H=3.0,D=2.4;      // 箱体外形
+    const WALL=0.22;              // 门/壁厚
+
+    // 箱体（做成前面开口的盒：用一个实体 + 前面挖出的门腔用较小的深色内腔近似）
+    const bodyGeo=new THREE.BoxGeometry(W,H,D);
+    const body=new THREE.Mesh(bodyGeo,bodyMat);
+    safe.add(body);
+    // 前面板凹槽（内腔深色）
+    const cavity=new THREE.Mesh(new THREE.BoxGeometry(W-0.5,H-0.5,0.4),darkMat);
+    cavity.position.set(0,0,D/2-0.18);
+    safe.add(cavity);
+
+    // 门：绕右侧竖轴（铰链）开合。用一个 pivot 放在门的右边缘
+    const doorPivot=new THREE.Group();
+    doorPivot.position.set(W/2,0,D/2);   // 铰链在箱体右前缘
+    safe.add(doorPivot);
+    const door=new THREE.Group();
+    doorPivot.add(door);
+    const doorW=W,doorH=H;               // 门与箱体长宽一致
+    const doorPlate=new THREE.Mesh(new THREE.BoxGeometry(doorW,doorH,WALL),bodyMat);
+    // 门板放到 pivot 左侧（门中心相对铰链偏左）
+    doorPlate.position.set(-doorW/2,0,WALL/2);
+    door.add(doorPlate);
+    // 门面内嵌凹边框
+    const doorInset=new THREE.Mesh(new THREE.BoxGeometry(doorW-0.34,doorH-0.34,0.06),darkMat);
+    doorInset.position.set(-doorW/2,0,WALL+0.02);
+    door.add(doorInset);
+
+    // 转盘门把手（左侧圆形）：底座 + 圆盘 + 十字辐条
+    const dialGrp=new THREE.Group();
+    dialGrp.position.set(-doorW*0.66,-0.15,WALL+0.05);
+    door.add(dialGrp);
+    const dialBase=new THREE.Mesh(new THREE.CylinderGeometry(0.52,0.56,0.12,40),steelDark);
+    dialBase.rotation.x=Math.PI/2;dialGrp.add(dialBase);
+    const dial=new THREE.Mesh(new THREE.CylinderGeometry(0.42,0.42,0.16,40),steelMat);
+    dial.rotation.x=Math.PI/2;dial.position.z=0.06;dialGrp.add(dial);
+    // 辐条把手（十字）
+    for(let i=0;i<4;i++){
+      const spoke=new THREE.Mesh(new THREE.BoxGeometry(0.86,0.1,0.1),steelMat);
+      spoke.position.z=0.16;spoke.rotation.z=i*Math.PI/2;dialGrp.add(spoke);
+    }
+    const hub=new THREE.Mesh(new THREE.CylinderGeometry(0.13,0.13,0.22,24),steelMat);
+    hub.rotation.x=Math.PI/2;hub.position.z=0.18;dialGrp.add(hub);
+
+    // 键盘面板（右上）：底板 + 绿色显示屏 + 3x4 按键
+    const padGrp=new THREE.Group();
+    padGrp.position.set(-doorW*0.24,0.15,WALL+0.04);
+    door.add(padGrp);
+    const padBase=new THREE.Mesh(new THREE.BoxGeometry(0.86,1.3,0.08),padMat);
+    padGrp.add(padBase);
+    const screen=new THREE.Mesh(new THREE.BoxGeometry(0.72,0.24,0.05),screenMat);
+    screen.position.set(0,0.48,0.06);padGrp.add(screen);
+    for(let r=0;r<4;r++)for(let c=0;c<3;c++){
+      const k=new THREE.Mesh(new THREE.BoxGeometry(0.18,0.15,0.06),keyMat);
+      k.position.set(-0.22+c*0.22,0.18-r*0.22,0.07);
+      padGrp.add(k);
+    }
+
+    // 铰链（右侧两个）
+    for(let i=0;i<2;i++){
+      const hinge=new THREE.Mesh(new THREE.CylinderGeometry(0.14,0.14,0.5,20),steelDark);
+      hinge.position.set(W/2-0.02,(i?-1:1)*0.9,D/2+0.02);
+      safe.add(hinge);
+    }
+
+    // 底部支脚
+    for(let sx=-1;sx<=1;sx+=2)for(let sz=-1;sz<=1;sz+=2){
+      const foot=new THREE.Mesh(new THREE.BoxGeometry(0.34,0.22,0.34),darkMat);
+      foot.position.set(sx*(W/2-0.3),-H/2-0.1,sz*(D/2-0.3));
+      safe.add(foot);
+    }
+    // SENTRY 铭牌（门左上小方块）
+    const badge=new THREE.Mesh(new THREE.BoxGeometry(0.5,0.16,0.03),steelDark);
+    badge.position.set(-doorW*0.62,doorH*0.34,WALL+0.03);
+    door.add(badge);
+
+    // 相机自适应距离：取景按“闭合箱体的正面投影”定框，让箱体尽量填满画面
+    const OPEN_ANGLE=Math.PI*0.46;   // 门向外打开的角度（绕 Y 轴），控制在正视下不横向超框
+    const _box=new THREE.Box3();
+    const _sphere=new THREE.Sphere();
+    let SAFE_CENTER=new THREE.Vector3(0,0,0);
+    let SAFE_RADIUS=Math.hypot(W,H,D)/2;
+    function measureSafeBounds(){
+      // 以闭合箱体测量，使箱体尽量占满画面；门张开时朝相机迎面转出，基本不超出横竖边框
+      doorPivot.rotation.y=0;
+      safe.updateMatrixWorld(true);
+      _box.setFromObject(safe);            // 含支脚/铭牌等所有部件的真实包围盒
+      _box.getBoundingSphere(_sphere);
+      SAFE_CENTER.copy(_box.getCenter(new THREE.Vector3()));
+      // 用真实包围盒的正面宽高外接圆定框，确保底部支脚等不被裁切
+      const bw=_box.max.x-_box.min.x;
+      const bh=_box.max.y-_box.min.y;
+      SAFE_RADIUS=Math.hypot(bw,bh)/2;
+      safe.updateMatrixWorld(true);
+    }
+    const S_MARGIN=1.12;
+    const sCamDir=new THREE.Vector3(0,0.32,1).normalize();
+    function sizeSecurity(){
+      const w=securityCanvas.clientWidth||520;
+      const h=securityCanvas.clientHeight||520;
+      sRenderer.setSize(w,h,false);
+      const aspect=w/h;sCamera.aspect=aspect;
+      const vFov=sCamera.fov*Math.PI/180;
+      const distV=SAFE_RADIUS/Math.sin(vFov/2);
+      const hFov=2*Math.atan(Math.tan(vFov/2)*aspect);
+      const distH=SAFE_RADIUS/Math.sin(hFov/2);
+      const dist=Math.max(distV,distH)*S_MARGIN;
+      sCamera.position.copy(sCamDir).multiplyScalar(dist).add(SAFE_CENTER);
+      sCamera.lookAt(SAFE_CENTER);sCamera.updateProjectionMatrix();
+    }
+    measureSafeBounds();
+    sizeSecurity();
+    addEventListener('resize',sizeSecurity);
+
+    // 门开合状态机：关 → 开 → 停留 → 合 循环
+    const sClock=new THREE.Clock();
+    let secVisible=false,secRendering=false;
+    let doorPhase='closed',phaseT=0;
+    const HOLD_CLOSED=1.6,OPENING=1.4,HOLD_OPEN=2.2,CLOSING=1.2;
+    function easeIO(p){return p<.5?4*p*p*p:1-Math.pow(-2*p+2,3)/2;}
+    function renderSecurity(){
+      if(!secVisible){secRendering=false;return;}
+      const dt=Math.min(sClock.getDelta(),0.05);
+      phaseT+=dt;
+      let openAmt=0;
+      if(doorPhase==='closed'){openAmt=0;if(phaseT>=HOLD_CLOSED){doorPhase='opening';phaseT=0;}}
+      else if(doorPhase==='opening'){openAmt=easeIO(Math.min(1,phaseT/OPENING));if(phaseT>=OPENING){doorPhase='open';phaseT=0;}}
+      else if(doorPhase==='open'){openAmt=1;if(phaseT>=HOLD_OPEN){doorPhase='closing';phaseT=0;}}
+      else{openAmt=1-easeIO(Math.min(1,phaseT/CLOSING));if(phaseT>=CLOSING){doorPhase='closed';phaseT=0;}}
+      doorPivot.rotation.y=OPEN_ANGLE*openAmt;
+      // 转盘随开门轻微转动，营造“解锁”感
+      dialGrp.rotation.z=(-0.6+openAmt*1.9);
+      sRenderer.render(sScene,sCamera);
+      requestAnimationFrame(renderSecurity);
+    }
+    function startSecurityRender(){if(secRendering)return;secRendering=true;sClock.getDelta();renderSecurity();}
+    if('IntersectionObserver' in window){
+      const ob=new IntersectionObserver(es=>{secVisible=es[0].isIntersecting;if(secVisible)startSecurityRender();},{threshold:.05});
+      ob.observe(securitySec);
+    }else{secVisible=true;startSecurityRender();}
+    // 右侧要点逐条入场
+    if(securityPoints&&window.gsap&&window.ScrollTrigger){
+      const pts=[...securityPoints.querySelectorAll('.security-point')];
+      gsap.to(pts,{opacity:1,x:0,duration:.7,ease:'power3.out',stagger:.22,scrollTrigger:{trigger:securitySec,start:'top 62%'}});
+    }
+  }
+
+  // AGENT 屏：右侧聊天气泡随滚动逐条显示，最多同时显示 3 条，整体与小球垂直居中并随新气泡上移
+  const agentChat=document.getElementById('agentChat');
+  const watcherSecEl=document.getElementById('watcherSec');
+  if(agentChat&&watcherSecEl&&window.gsap&&window.ScrollTrigger){
+    const bubbles=[...agentChat.querySelectorAll('.chat-bubble')];
+    const VISIBLE=3;
+    const ROW=88; // 每条气泡的行高（含间距）
+    ScrollTrigger.create({
+      trigger:watcherSecEl,start:'top top',end:'+=2100',scrub:1,pin:true,anticipatePin:1,
+      onUpdate:self=>{
+        // head：当前已推进到的“最新”气泡索引（浮点）
+        const head=self.progress*(bubbles.length+VISIBLE-2);
+        bubbles.forEach((b,i)=>{
+          // slot：相对当前窗口底部的位置，0=最新在底部，越大越靠上越旧
+          const slot=head-i;
+          let op=0;
+          if(slot>=-0.5&&slot<VISIBLE-0.5){
+            const inFade=Math.min(1,(slot+0.5)*1.6);
+            const outFade=Math.min(1,(VISIBLE-0.5-slot)*1.6);
+            op=Math.max(0,Math.min(inFade,outFade));
+          }
+          // 新气泡出现在底部，旧气泡整体上移；最新 VISIBLE 条保持居中
+          const y=((VISIBLE-1)/2-slot)*ROW;
+          gsap.set(b,{y:y,opacity:op,scale:.9+op*.1});
+        });
+      }
+    });
+  }
+
+  if(animationVideo){
+    animationVideo.addEventListener('ended',()=>{
+      const dur=animationVideo.duration;
+      const restart=Number.isFinite(dur)&&dur>animationLoopStart?animationLoopStart:0;
+      try{animationVideo.currentTime=restart;}catch(e){}
+      if(tl.time()>=animationVideoStart&&!workflowActive){
+        const p=animationVideo.play();
+        if(p&&p.catch)p.catch(()=>{});
+      }
+    });
+  }
+
+  addEventListener('resize',()=>{tl.time()>=uiStart?alignAnimationImage():alignModelVideoToFig();ScrollTrigger.refresh();});
+  // 四张视图加载完成后刷新 ScrollTrigger，确保 pin 行程/位置准确
+  imageSec.querySelectorAll('.image-figures .fig').forEach(img=>{
+    if(img.complete){ScrollTrigger.refresh();}
+    else{img.addEventListener('load',()=>ScrollTrigger.refresh());}
+  });
+  addEventListener('load',()=>{syncModelVideo();ScrollTrigger.refresh();});
+})();
+</script>
+</body>
+</html>

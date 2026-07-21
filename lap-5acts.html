@@ -1,0 +1,115 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>LAP · Game Asset Agent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Anton&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#050505;--panel:#0b0d0c;--ink:#fff;--muted:#8b918d;--green:#00ff66;--green-soft:rgba(0,255,102,.18);
+    --line:rgba(255,255,255,.12);--line2:rgba(0,255,102,.22);
+    --huge:"Anton","Space Grotesk",sans-serif;--display:"Space Grotesk","PingFang SC","Microsoft YaHei",sans-serif;--mono:"JetBrains Mono",monospace;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth;background:var(--bg)}
+  body{background:var(--bg);color:var(--ink);font-family:var(--display);overflow-x:hidden;-webkit-font-smoothing:antialiased}
+  a{color:inherit;text-decoration:none} button{font-family:inherit;cursor:pointer} ::selection{background:var(--green);color:#000}
+  .noise{position:fixed;inset:0;z-index:999;pointer-events:none;opacity:.06;mix-blend-mode:screen;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='130' height='130'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.82' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)' opacity='.9'/%3E%3C/svg%3E")}
+  .mono{font-family:var(--mono);font-size:12px;letter-spacing:.12em;text-transform:uppercase;color:var(--muted)}
+  header{position:fixed;top:0;left:0;right:0;z-index:300;display:flex;justify-content:space-between;align-items:center;padding:22px 4vw;mix-blend-mode:difference;pointer-events:none}
+  header .brand{font-family:var(--mono);font-weight:700;letter-spacing:.18em;color:#fff;pointer-events:auto}
+  header nav{display:flex;gap:24px;pointer-events:auto} header nav a{font-size:12px;color:#fff;opacity:.72;transition:.25s} header nav a:hover{opacity:1;color:var(--green)}
+  @media(max-width:760px){header nav{display:none}}
+
+  /* Act 1 */
+  .hook{height:100dvh;position:relative;display:grid;place-items:center;overflow:hidden;background:#050505}
+  .hook-badge{position:absolute;top:18vh;left:4vw;border:1px solid var(--line2);color:var(--green);padding:8px 12px;border-radius:999px;background:rgba(0,255,102,.04);backdrop-filter:blur(10px)}
+  .lap-word{font-family:var(--huge);font-size:min(54vw,92vh);line-height:.78;letter-spacing:-.035em;color:#eee;display:flex;gap:.02em;transform-origin:center;will-change:transform,opacity;filter:drop-shadow(0 25px 80px rgba(255,255,255,.08))}
+  .lap-word span{display:block;background:linear-gradient(120deg,#fff,#8f948f 45%,#fff 70%);-webkit-background-clip:text;background-clip:text;color:transparent;text-shadow:0 0 1px rgba(255,255,255,.2)}
+  .hook-copy{position:absolute;left:4vw;bottom:7vh;max-width:650px}.hook-copy h1{font-size:clamp(20px,2.3vw,34px);font-weight:500;line-height:1.15;letter-spacing:-.02em}.hook-copy p{margin-top:12px;color:var(--muted);font-size:15px;max-width:52ch}
+  .hook-actions{position:absolute;right:4vw;bottom:7vh;display:flex;gap:10px;flex-wrap:wrap;justify-content:flex-end}.pill{border:1px solid var(--line);background:rgba(255,255,255,.03);color:#fff;border-radius:999px;padding:12px 18px;font-size:13px;transition:.25s}.pill:hover{border-color:var(--green);color:var(--green);transform:translateY(-2px)}
+  @media(max-width:900px){.hook-actions{left:4vw;right:auto;bottom:2.4vh}.hook-copy{bottom:12vh}.lap-word{font-size:52vw}}
+
+  /* Act 2 pipeline */
+  .pipeline-wrap{height:100dvh;position:relative;background:#050505;overflow:hidden}.pipeline-pin{height:100%;overflow:hidden;display:flex;align-items:center}.pipeline-track{display:flex;height:100%;will-change:transform}.pstage{min-width:100vw;height:100%;position:relative;display:grid;place-items:center;padding:0 5vw;overflow:hidden}.bg-word{position:absolute;inset:auto 0 6vh 0;text-align:center;font-family:var(--huge);font-size:clamp(80px,22vw,360px);line-height:.8;letter-spacing:-.03em;color:transparent;-webkit-text-stroke:1px rgba(255,255,255,.09);pointer-events:none}.stage-card{position:relative;z-index:5;width:min(760px,90vw);text-align:center}.stage-card .num{color:var(--green);margin-bottom:16px}.stage-card h2{font-family:var(--huge);font-size:clamp(48px,10vw,160px);line-height:.85;font-weight:400;text-transform:uppercase}.stage-card p{max-width:620px;margin:20px auto 0;color:var(--muted);font-size:16px}.asset-box{margin:34px auto 0;width:min(380px,72vw);aspect-ratio:3/4;border:1px solid var(--line2);background:rgba(0,255,102,.03);position:relative;overflow:hidden;box-shadow:0 0 80px rgba(0,255,102,.08)}.asset-box.wide{width:min(760px,86vw);aspect-ratio:16/9}.asset-box img{width:100%;height:100%;object-fit:cover;filter:saturate(.9) contrast(1.05)}.scan{position:absolute;left:0;right:0;top:0;height:2px;background:var(--green);box-shadow:0 0 25px var(--green);animation:scan 2.2s linear infinite}@keyframes scan{to{top:100%}}
+  .prompt{font-family:var(--mono);text-align:left;padding:24px;color:var(--green);font-size:13px;line-height:1.7}.cursor{animation:blink 1s steps(1) infinite}@keyframes blink{50%{opacity:0}}
+  .bones{position:absolute;inset:0;pointer-events:none;background:linear-gradient(90deg,transparent 49.8%,rgba(0,255,102,.85) 50%,transparent 50.2%),linear-gradient(0deg,transparent 49.8%,rgba(0,255,102,.65) 50%,transparent 50.2%);opacity:.45;mix-blend-mode:screen}.hud{position:absolute;inset:0;pointer-events:none}.hud:before,.hud:after{content:"";position:absolute;border:1px solid var(--green);box-shadow:0 0 18px rgba(0,255,102,.25)}.hud:before{left:20px;top:20px;width:34%;height:12%}.hud:after{right:20px;bottom:20px;width:28%;height:34%;border-radius:50%}
+  .exports{display:flex;justify-content:center;gap:12px;margin-top:30px;flex-wrap:wrap}.fmt{font-family:var(--mono);border:1px solid var(--line2);color:var(--green);padding:10px 16px;border-radius:999px;background:rgba(0,255,102,.04)}
+
+  /* Act 3 workspace */
+  .workspace{background:#050505;padding:12vh 5vw}.ws-row{min-height:90dvh;display:grid;grid-template-columns:.7fr 1.3fr;gap:6vw;align-items:center;border-top:1px solid var(--line);position:relative}.ws-num{position:sticky;top:18vh;font-family:var(--huge);font-size:clamp(120px,22vw,330px);line-height:.8;color:transparent;-webkit-text-stroke:1px rgba(255,255,255,.12)}.ws-copy h3{font-size:clamp(32px,5vw,72px);line-height:1.02;letter-spacing:-.03em}.ws-copy p{margin-top:18px;color:var(--muted);max-width:50ch}.ws-visual{margin-top:40px;height:320px;border:1px solid var(--line2);background:linear-gradient(135deg,rgba(0,255,102,.08),transparent);position:relative;overflow:hidden}.node{position:absolute;border:1px solid var(--green);color:var(--green);font-family:var(--mono);font-size:11px;padding:10px 14px;background:#050505}.n1{left:10%;top:22%}.n2{left:42%;top:52%}.n3{right:12%;top:26%}.beam{position:absolute;height:1px;background:linear-gradient(90deg,transparent,var(--green),transparent);left:20%;right:20%;top:47%;box-shadow:0 0 16px var(--green);animation:beam 1.8s linear infinite}@keyframes beam{50%{opacity:.25}}
+  @media(max-width:900px){.ws-row{grid-template-columns:1fr}.ws-num{position:relative;top:auto;font-size:140px}.ws-visual{height:260px}}
+
+  /* Act 4 vault */
+  .vault{min-height:120dvh;background:radial-gradient(circle at 50% 40%,rgba(0,255,102,.12),transparent 38%),#080b09;position:relative;display:flex;align-items:center;padding:12vh 5vw;overflow:hidden}.vault-word{position:absolute;inset:auto 0 4vh 0;text-align:center;font-family:var(--huge);font-size:clamp(90px,24vw,390px);line-height:.8;color:transparent;-webkit-text-stroke:1px rgba(0,255,102,.16)}.shield{position:absolute;right:8vw;top:50%;width:min(38vw,420px);aspect-ratio:1;transform:translateY(-50%);border:1px solid var(--line2);clip-path:polygon(50% 0,90% 18%,78% 82%,50% 100%,22% 82%,10% 18%);box-shadow:0 0 100px rgba(0,255,102,.12),inset 0 0 80px rgba(0,255,102,.08);animation:shield 5s ease-in-out infinite}@keyframes shield{50%{transform:translateY(-50%) rotate(7deg) scale(.96)}}.vault-content{position:relative;z-index:4;max-width:680px}.vault-content h2{font-family:var(--huge);font-size:clamp(60px,12vw,190px);line-height:.85;font-weight:400}.promise{margin-top:34px;display:grid;gap:18px}.promise div{border-left:2px solid var(--green);padding-left:18px}.promise h4{font-size:22px}.promise p{color:var(--muted);margin-top:6px}.promise div{opacity:.55;transition:.4s}.promise div:hover{opacity:1}
+  @media(max-width:900px){.shield{opacity:.28;right:-18vw;width:72vw}.vault-content h2{font-size:80px}}
+
+  /* Act 5 launchpad */
+  .launch{min-height:100dvh;display:grid;place-items:center;text-align:center;position:relative;overflow:hidden;padding:10vh 5vw}.portal{position:absolute;width:min(56vw,620px);aspect-ratio:1;border-radius:50%;background:radial-gradient(circle,rgba(0,255,102,.22),rgba(0,255,102,.05) 42%,transparent 66%);filter:blur(8px);animation:portal 4s ease-in-out infinite}@keyframes portal{50%{transform:scale(1.08);opacity:.7}}.launch-inner{position:relative;z-index:3}.launch h2{font-family:var(--huge);font-size:clamp(58px,15vw,240px);line-height:.84;font-weight:400;text-transform:uppercase}.launch p{color:var(--muted);margin:24px auto 36px;max-width:52ch}.magnet{width:180px;height:180px;border-radius:50%;border:1px solid var(--green);background:rgba(0,255,102,.05);color:var(--green);font-family:var(--mono);font-weight:700;letter-spacing:.08em;display:inline-grid;place-items:center;transition:box-shadow .3s;box-shadow:0 0 90px rgba(0,255,102,.12)}.magnet:hover{box-shadow:0 0 140px rgba(0,255,102,.28)}footer{border-top:1px solid var(--line);padding:46px 5vw;display:flex;justify-content:space-between;color:var(--muted);font-family:var(--mono);font-size:12px;flex-wrap:wrap;gap:14px}
+
+  @media(prefers-reduced-motion:reduce){*{scroll-behavior:auto!important}.scan,.shield,.portal{animation:none}}
+</style>
+</head>
+<body>
+<div class="noise"></div>
+<header><div class="brand">LAP</div><nav><a href="#pipeline">Pipeline</a><a href="#workspace">Workspace</a><a href="#vault">Security</a><a href="#launch">Launch</a></nav></header>
+
+<section class="hook" id="hook">
+  <div class="hook-badge mono">POWERED BY LAP ASSET AGENT</div>
+  <div class="lap-word" id="lapWord"><span>L</span><span>A</span><span>P</span></div>
+  <div class="hook-copy"><h1>LAP - 游戏资产智能体。专为现代游戏开发打造的 PaaS 资产平台。</h1><p>从一句话到可入库资产，连接概念、模型、动画、场景、UI 与引擎导出。</p></div>
+  <div class="hook-actions"><a class="pill" href="#pipeline">立即体验</a><a class="pill" href="#launch">下载桌面客户端</a><a class="pill" href="#workspace">前往社区</a></div>
+</section>
+
+<section class="pipeline-wrap" id="pipeline"><div class="pipeline-pin"><div class="pipeline-track" id="track">
+  <article class="pstage"><div class="bg-word">CONCEPT</div><div class="stage-card"><div class="num mono">01 / CONCEPT</div><h2>Prompt</h2><div class="asset-box"><div class="prompt">Prompt: A cyberpunk female assassin, neon katana, Unreal Engine 5 render<span class="cursor">_</span></div><div class="scan"></div></div><p>创意萌芽。一句话定义角色、风格与镜头语言。</p></div></article>
+  <article class="pstage"><div class="bg-word">2D ART</div><div class="stage-card"><div class="num mono">02 / CONCEPT ART</div><h2>Reveal</h2><div class="asset-box"><img src="assets/hero-char.png" alt=""><div class="scan"></div></div><p>输入框化为粒子，线稿、色块与材质在舞台中央显影。</p></div></article>
+  <article class="pstage"><div class="bg-word">3D MESH</div><div class="stage-card"><div class="num mono">03 / DIMENSION</div><h2>Mesh</h2><div class="asset-box"><img src="assets/stage2-wireframe.png" alt=""><div class="scan"></div></div><p>绿色扫描线划过，2D 立绘被升维为带网格的 3D 角色。</p></div></article>
+  <article class="pstage"><div class="bg-word">RIGGING</div><div class="stage-card"><div class="num mono">04 / SKELETON</div><h2>Rig</h2><div class="asset-box"><img src="assets/stage6-rigged.png" alt=""><div class="bones"></div></div><p>虚拟骨骼从脚底向上延伸，控制点精准卡入关节。</p></div></article>
+  <article class="pstage"><div class="bg-word">WORLD</div><div class="stage-card"><div class="num mono">05 / ENVIRONMENT</div><h2>World</h2><div class="asset-box wide"><img src="assets/work-scene.png" alt=""></div><p>镜头拉远，建筑、霓虹、雨水路面快速拼接成完整关卡。</p></div></article>
+  <article class="pstage"><div class="bg-word">HUD & UI</div><div class="stage-card"><div class="num mono">06 / INTERFACE</div><h2>HUD</h2><div class="asset-box wide"><img src="assets/stage7-scene.png" alt=""><div class="hud"></div></div><p>血条、技能、小地图吸附到屏幕边缘，形成可玩的游戏画面。</p></div></article>
+  <article class="pstage"><div class="bg-word">PIPELINE</div><div class="stage-card"><div class="num mono">07 / EXPORT</div><h2>Ship</h2><div class="asset-box wide"><img src="assets/work-3d.png" alt=""><div class="scan"></div></div><div class="exports"><span class="fmt">.PSD</span><span class="fmt">.FBX</span><span class="fmt">.UPROJECT</span></div><p>一键导出，直通引擎。这就是 LAP 的工业化效率。</p></div></article>
+</div></div></section>
+
+<section class="workspace" id="workspace">
+  <div class="ws-row"><div class="ws-num">01</div><div class="ws-copy"><h3>可视化工作流画布</h3><p>直观的节点式编排界面，支持自由配置和扩展资产处理管线，让复杂流程一目了然。</p><div class="ws-visual"><div class="node n1">PROMPT</div><div class="node n2">MESH</div><div class="node n3">EXPORT</div><div class="beam"></div></div></div></div>
+  <div class="ws-row"><div class="ws-num">02</div><div class="ws-copy"><h3>企业级资产库与账本</h3><p>统一管理模型、素材及版本信息。资产链路清晰可追溯，实现资产沉淀与精细化运营。</p><div class="ws-visual"><div class="node n1">v1.0</div><div class="node n2">v1.7</div><div class="node n3">Approved</div><div class="beam"></div></div></div></div>
+  <div class="ws-row"><div class="ws-num">03</div><div class="ws-copy"><h3>智能体配置引擎</h3><p>模块化智能体设计，支持自定义场景化应用，提升资产处理的智能化水平。</p><div class="ws-visual"><div class="node n1">Agent</div><div class="node n2">Style Lock</div><div class="node n3">Batch Run</div><div class="beam"></div></div></div></div>
+</section>
+
+<section class="vault" id="vault"><div class="vault-word">SECURE</div><div class="shield"></div><div class="vault-content"><div class="mono">The Vault</div><h2>SECURE</h2><div class="promise"><div><h4>绝对数据隔离</h4><p>客户数据独立存储，训练集物理隔离，确保核心资产不外泄。</p></div><div><h4>零内容竞争</h4><p>平台坚守工具定位，不参与游戏研发竞争，保护客户创意与商业机密。</p></div><div><h4>严苛权限管控</h4><p>支持企业级权限细分，提供完整资产审计日志，适配大型团队合规要求。</p></div></div></div></section>
+
+<section class="launch" id="launch"><div class="portal"></div><div class="launch-inner"><h2>Upgrade<br>to LAP</h2><p>准备好开启您的资产工业化升级之旅了吗？</p><button class="magnet" id="magnet">立即体验</button></div></section>
+<footer><span>LAP © 2026</span><span>business@lap.ai</span><span>Terms / Privacy</span></footer>
+
+<script src="libs/gsap.min.js"></script><script src="libs/ScrollTrigger.min.js"></script><script src="libs/lenis.min.js"></script>
+<script>
+(function(){
+  const LenisCtor=window.Lenis||(window.lenis&&window.lenis.default);
+  if(LenisCtor&&window.gsap){const lenis=new LenisCtor({duration:1.25,smoothWheel:true});lenis.on('scroll',()=>ScrollTrigger.update());gsap.ticker.add(t=>lenis.raf(t*1000));gsap.ticker.lagSmoothing(0);}
+  if(window.gsap&&window.ScrollTrigger){
+    gsap.registerPlugin(ScrollTrigger);
+    gsap.to('#lapWord',{scale:7,opacity:0,ease:'none',scrollTrigger:{trigger:'#hook',start:'top top',end:'bottom top',scrub:true}});
+    const track=document.getElementById('track'),stages=gsap.utils.toArray('.pstage');
+    // 第二幕使用 ScrollTrigger 标准 pin 流程：每个阶段约 1.25 屏滚动距离，避免进入第二幕时速度被压缩
+    const pipelineTween=gsap.to(track,{xPercent:-100*(stages.length-1),ease:'none',scrollTrigger:{
+      trigger:'#pipeline',
+      start:'top top',
+      end:()=>'+='+(window.innerHeight*(stages.length-1)*1.25),
+      scrub:1.15,
+      pin:true,
+      pinSpacing:true,
+      anticipatePin:1,
+      invalidateOnRefresh:true
+    }});
+    gsap.utils.toArray('.stage-card').forEach(card=>gsap.from(card,{y:70,autoAlpha:0,duration:1,scrollTrigger:{trigger:card,start:'top 80%'}}));
+  }
+  const m=document.getElementById('magnet');
+  if(m){document.addEventListener('mousemove',e=>{const r=m.getBoundingClientRect(),cx=r.left+r.width/2,cy=r.top+r.height/2,dx=e.clientX-cx,dy=e.clientY-cy,d=Math.hypot(dx,dy);if(d<220){m.style.transform=`translate(${dx*.18}px,${dy*.18}px)`}else{m.style.transform='translate(0,0)'}})}
+})();
+</script>
+</body>
+</html>

@@ -1,0 +1,395 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>LAP · 游戏美术 AI 生产引擎</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Orbitron:wght@600;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#0a0a0f;--bg-soft:#12121b;--ink:#f4f1ea;--ink-dim:#948fa2;--ink-faint:#5c5866;
+    --gold:#e8b04b;--gold-2:#ffd98a;--line:rgba(255,255,255,.10);--line-soft:rgba(255,255,255,.06);
+    --glass:rgba(16,15,24,.6);
+    --brand:"Orbitron","Space Grotesk",sans-serif;
+    --display:"Space Grotesk","PingFang SC","Microsoft YaHei",sans-serif;
+    --sans:"PingFang SC","Microsoft YaHei","Helvetica Neue",sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{
+    background:radial-gradient(70% 55% at 50% 0%,rgba(232,176,75,.09),transparent 60%),var(--bg);
+    color:var(--ink);font-family:var(--sans);line-height:1.6;overflow-x:hidden;-webkit-font-smoothing:antialiased;
+  }
+  ::selection{background:var(--gold);color:#0a0a0f}
+  button,input{font-family:inherit}
+  a{color:inherit;text-decoration:none}
+  a,.menu-toggle,.overlay nav a{cursor:pointer}
+  img{display:block;max-width:100%}
+  .mono{font-family:var(--display);font-size:12px;letter-spacing:.24em;text-transform:uppercase;color:var(--ink-dim)}
+
+  /* 细颗粒噪点（固定层，不影响滚动性能） */
+  .grain{position:fixed;inset:0;z-index:400;pointer-events:none;opacity:.05;mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+
+  /* ---------- 导航 ---------- */
+  header{position:fixed;top:0;left:0;right:0;z-index:300;display:flex;align-items:center;justify-content:space-between;padding:20px 5vw;backdrop-filter:blur(12px);background:linear-gradient(180deg,rgba(10,10,15,.72),transparent)}
+  .brand{display:flex;align-items:center;gap:11px;font-family:var(--brand);font-size:20px;font-weight:700;letter-spacing:.12em}
+  .brand .mark{width:34px;height:34px;border-radius:9px;background:linear-gradient(135deg,var(--gold),var(--gold-2));display:grid;place-items:center;color:#0a0a0f;font-size:18px;font-weight:700}
+  .menu-toggle{font-family:var(--display);font-size:14px;font-weight:500;letter-spacing:.06em;background:none;border:1px solid var(--line);color:var(--ink);padding:10px 20px;border-radius:999px;cursor:pointer;transition:border-color .3s,color .3s}
+  .menu-toggle:hover{border-color:var(--gold);color:var(--gold)}
+  .overlay{position:fixed;inset:0;z-index:290;background:rgba(10,10,15,.97);backdrop-filter:blur(20px);display:flex;flex-direction:column;justify-content:center;padding:0 8vw;opacity:0;pointer-events:none;transition:opacity .5s}
+  .overlay.open{opacity:1;pointer-events:auto}
+  .overlay nav{display:flex;flex-direction:column;gap:4px}
+  .overlay nav a{font-family:var(--display);font-size:clamp(38px,8vw,90px);font-weight:600;letter-spacing:-.02em;transition:color .3s,transform .4s;width:fit-content;display:flex;gap:18px;align-items:baseline}
+  .overlay nav a:hover{color:var(--gold);transform:translateX(18px)}
+  .overlay nav a .i{font-size:14px;color:var(--ink-faint)}
+  .overlay .f{position:absolute;bottom:6vh;left:8vw;right:8vw;display:flex;justify-content:space-between;color:var(--ink-dim);font-size:14px;flex-wrap:wrap;gap:12px}
+
+  /* ---------- HERO：真实角色主视觉 ---------- */
+  .hero{position:relative;min-height:100dvh;display:flex;align-items:center;overflow:hidden}
+  .hero-bg{position:absolute;inset:0;z-index:0;display:flex;justify-content:center;align-items:center}
+  .hero-bg .glowfield{position:absolute;width:80vh;height:80vh;border-radius:50%;
+    background:radial-gradient(circle,rgba(232,176,75,.28),rgba(232,176,75,.06) 40%,transparent 70%);
+    filter:blur(20px);animation:breathe 7s ease-in-out infinite}
+  @keyframes breathe{0%,100%{transform:scale(1);opacity:.9}50%{transform:scale(1.08);opacity:1}}
+  .hero-char{position:absolute;right:6vw;bottom:0;height:98vh;max-height:1000px;z-index:2;
+    filter:drop-shadow(0 30px 80px rgba(0,0,0,.6));object-fit:contain;will-change:transform}
+  @media(max-width:900px){.hero-char{right:50%;transform:translateX(50%);opacity:.4;height:80vh}}
+  .hero::after{content:"";position:absolute;inset:0;z-index:3;pointer-events:none;
+    background:linear-gradient(90deg,var(--bg) 8%,rgba(10,10,15,.4) 40%,transparent 65%),
+    linear-gradient(0deg,var(--bg),transparent 30%)}
+  .hero-inner{position:relative;z-index:5;padding:0 5vw;max-width:1240px;margin:0 auto;width:100%}
+  .hero .eyebrow{display:inline-flex;align-items:center;gap:9px;margin-bottom:26px}
+  .hero .eyebrow .dot{width:7px;height:7px;border-radius:50%;background:var(--gold);box-shadow:0 0 10px var(--gold);animation:pulse 1.8s infinite}
+  @keyframes pulse{0%,100%{opacity:1}50%{opacity:.3}}
+  .hero h1{font-family:var(--display);font-size:clamp(44px,7.5vw,110px);font-weight:600;line-height:.98;letter-spacing:-.03em;max-width:13ch}
+  .hero h1 em{font-style:italic;color:var(--gold);font-weight:500}
+  .hero .sub{margin-top:28px;font-size:clamp(16px,1.6vw,20px);color:var(--ink-dim);max-width:46ch}
+  .hero .cta-row{margin-top:38px;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+  .btn{font-family:var(--display);font-weight:500;font-size:15px;padding:15px 30px;border-radius:999px;cursor:pointer;border:none;transition:transform .2s,box-shadow .3s,border-color .3s,color .3s,background .3s;display:inline-flex;align-items:center;gap:10px}
+  .btn:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+  .btn:active{transform:translateY(0) scale(.97)}
+  .btn-primary{background:var(--gold);color:#0a0a0f}
+  .btn-primary:hover{transform:translateY(-2px);box-shadow:0 14px 34px rgba(232,176,75,.3)}
+  .btn-ghost{background:transparent;border:1px solid var(--line);color:var(--ink)}
+  .btn-ghost:hover{border-color:var(--gold);color:var(--gold)}
+  .btn-ghost .tri{width:20px;height:20px;border-radius:50%;background:var(--gold);display:grid;place-items:center;color:#0a0a0f;font-size:9px}
+  .hero-meta{position:absolute;bottom:4vh;left:5vw;right:5vw;max-width:1240px;margin:0 auto;display:flex;justify-content:space-between;z-index:5}
+  /* 夸张极简：巨型品牌水印 */
+  .hero-watermark{position:absolute;left:0;right:0;bottom:-2vh;z-index:1;text-align:center;font-family:var(--brand);font-weight:900;
+    font-size:min(38vw,560px);line-height:.8;letter-spacing:.02em;pointer-events:none;
+    color:transparent;-webkit-text-stroke:1px rgba(255,255,255,.05);
+    background:linear-gradient(180deg,rgba(255,255,255,.05),transparent);-webkit-background-clip:text;background-clip:text;}
+
+  /* ---------- 通用 ---------- */
+  section.block{padding:min(15vh,130px) 5vw;max-width:1240px;margin:0 auto;position:relative}
+  .sec-title{font-family:var(--display);font-size:clamp(30px,4.6vw,62px);font-weight:600;line-height:1.05;letter-spacing:-.02em;max-width:18ch}
+  .sec-title em{font-style:italic;color:var(--gold);font-weight:500}
+  .sec-lead{margin-top:20px;color:var(--ink-dim);font-size:clamp(16px,1.5vw,19px);max-width:56ch}
+
+  /* ---------- 作品画廊（真实图） ---------- */
+  .gallery{display:grid;grid-template-columns:repeat(6,1fr);grid-auto-rows:200px;gap:16px;margin-top:52px}
+  @media(max-width:900px){.gallery{grid-template-columns:repeat(2,1fr);grid-auto-rows:160px}}
+  .art{position:relative;border-radius:18px;overflow:hidden;border:1px solid var(--line);cursor:pointer}
+  .art img{width:100%;height:100%;object-fit:cover;transition:transform .7s cubic-bezier(.2,.7,.3,1)}
+  .art:hover img{transform:scale(1.07)}
+  .art::after{content:"";position:absolute;inset:0;background:linear-gradient(0deg,rgba(0,0,0,.55),transparent 55%);opacity:0;transition:opacity .4s}
+  .art:hover::after{opacity:1}
+  .art .cap{position:absolute;left:16px;bottom:14px;z-index:2;opacity:0;transform:translateY(8px);transition:all .4s}
+  .art:hover .cap{opacity:1;transform:none}
+  .art .cap .t{font-family:var(--display);font-weight:600;font-size:17px}
+  .art .cap .k{font-size:12px;color:var(--gold-2)}
+  .art.a1{grid-column:span 3;grid-row:span 2}
+  .art.a2{grid-column:span 3;grid-row:span 1}
+  .art.a3{grid-column:span 2;grid-row:span 1}
+  .art.a4{grid-column:span 1;grid-row:span 1}
+  @media(max-width:900px){.art.a1,.art.a2,.art.a3,.art.a4{grid-column:span 2;grid-row:span 1}.art.a1{grid-row:span 2}}
+
+  /* ---------- 交互实验室 ---------- */
+  .lab{display:grid;grid-template-columns:1fr 1fr;gap:44px;align-items:center;margin-top:52px}
+  @media(max-width:900px){.lab{grid-template-columns:1fr;gap:28px}}
+  .lab-panel{background:var(--bg-soft);border:1px solid var(--line);border-radius:22px;padding:30px}
+  .prompt-box{display:flex;gap:10px;align-items:center;background:var(--bg);border:1px solid var(--line);border-radius:14px;padding:8px 8px 8px 18px}
+  .prompt-box input{flex:1;background:none;border:none;outline:none;color:var(--ink);font-size:15px}
+  .prompt-box input::placeholder{color:var(--ink-faint)}
+  .prompt-box button{background:var(--gold);color:#0a0a0f;border:none;border-radius:10px;padding:11px 18px;font-weight:600;cursor:pointer;font-family:var(--display)}
+  .temp-wrap{margin-top:26px}
+  .temp-head{display:flex;justify-content:space-between;align-items:baseline;margin-bottom:12px}
+  .temp-head .val{font-family:var(--display);font-size:22px;font-weight:600;color:var(--gold)}
+  input[type=range]{width:100%;-webkit-appearance:none;appearance:none;height:4px;border-radius:4px;background:var(--line);outline:none}
+  input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:20px;height:20px;border-radius:50%;background:var(--gold);cursor:pointer;box-shadow:0 0 0 4px rgba(232,176,75,.18)}
+  input[type=range]::-moz-range-thumb{width:20px;height:20px;border:none;border-radius:50%;background:var(--gold);cursor:pointer}
+  .temp-ticks{display:flex;justify-content:space-between;margin-top:10px;font-size:12px;color:var(--ink-faint)}
+  .lab-readout{font-size:14px;color:var(--ink-dim);margin-top:22px;line-height:1.7;min-height:3.4em}
+  .lab-readout b{color:var(--ink)}
+  .lab-visual{aspect-ratio:1;border-radius:22px;border:1px solid var(--line);overflow:hidden;position:relative;background:#000}
+  .lab-visual .styleimg{position:absolute;inset:0;background-size:cover;background-position:center;opacity:0;transition:opacity .6s,filter .6s,transform .6s}
+  .lab-visual .styleimg.on{opacity:1}
+  .lab-visual .tag{position:absolute;left:16px;bottom:16px;z-index:3;background:var(--glass);border:1px solid var(--line);border-radius:8px;padding:6px 12px;font-size:12px;color:var(--gold-2);backdrop-filter:blur(6px)}
+
+  /* ---------- Features ---------- */
+  .feat-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:16px;margin-top:52px}
+  .feat{border:1px solid var(--line);border-radius:20px;padding:26px;background:var(--bg-soft);position:relative;overflow:hidden;transition:transform .4s,border-color .4s;min-height:210px;display:flex;flex-direction:column;justify-content:flex-end}
+  .feat:hover{transform:translateY(-6px);border-color:var(--gold)}
+  .feat .ic{font-size:24px;margin-bottom:auto;color:var(--gold)}
+  .feat h3{font-family:var(--display);font-size:21px;font-weight:600;margin-bottom:8px;letter-spacing:-.01em}
+  .feat p{font-size:14px;color:var(--ink-dim)}
+  .feat.c3{grid-column:span 3}.feat.c2{grid-column:span 2}.feat.c6{grid-column:span 6;min-height:170px;background:linear-gradient(120deg,rgba(232,176,75,.12),transparent 55%)}
+  @media(max-width:900px){.feat-grid{grid-template-columns:1fr}.feat{grid-column:span 1!important}}
+
+  /* ---------- Product ---------- */
+  .plans{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:52px}
+  @media(max-width:900px){.plans{grid-template-columns:1fr}}
+  .plan{border:1px solid var(--line);border-radius:22px;padding:32px;background:var(--bg-soft);display:flex;flex-direction:column;transition:transform .3s}
+  .plan:hover{transform:translateY(-6px)}
+  .plan.featured{border-color:var(--gold);background:linear-gradient(180deg,rgba(232,176,75,.08),var(--bg-soft))}
+  .plan .name{font-family:var(--display);font-size:15px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-dim)}
+  .plan .price{font-family:var(--display);font-size:44px;font-weight:600;margin:14px 0 4px;letter-spacing:-.02em}
+  .plan .price span{font-size:16px;color:var(--ink-dim);font-weight:400}
+  .plan .desc{color:var(--ink-dim);font-size:14px;margin-bottom:24px}
+  .plan ul{list-style:none;display:flex;flex-direction:column;gap:12px;margin-bottom:28px;flex:1}
+  .plan li{font-size:14px;display:flex;gap:10px}
+  .plan li .ck{color:var(--gold);font-weight:700}
+  .plan .badge{align-self:flex-start;font-size:12px;color:var(--gold);border:1px solid var(--gold);border-radius:999px;padding:4px 12px;margin-bottom:14px;font-family:var(--display);letter-spacing:.06em}
+
+  /* ---------- Reviews ---------- */
+  .rev-head{display:flex;align-items:baseline;gap:20px;flex-wrap:wrap;margin-bottom:40px}
+  .rev-score{font-family:var(--display);font-size:60px;font-weight:600;color:var(--gold);line-height:1}
+  .rev-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px}
+  @media(max-width:900px){.rev-grid{grid-template-columns:1fr}}
+  .rev{border:1px solid var(--line);border-radius:18px;padding:26px;background:var(--bg-soft)}
+  .rev .stars{color:var(--gold);font-size:14px;letter-spacing:2px;margin-bottom:14px}
+  .rev p{font-size:15px;margin-bottom:18px;line-height:1.6}
+  .rev .who{display:flex;align-items:center;gap:12px}
+  .rev .av{width:38px;height:38px;border-radius:50%;background-size:cover;background-position:center;border:1px solid var(--line)}
+  .rev .who .n{font-weight:600;font-size:14px}
+  .rev .who .r{font-size:12px;color:var(--ink-dim)}
+
+  /* ---------- CTA + Footer ---------- */
+  .cta{text-align:center;padding:min(17vh,150px) 6vw;position:relative}
+  .cta h2{font-family:var(--display);font-size:clamp(32px,5.5vw,78px);font-weight:600;letter-spacing:-.025em;line-height:1.02;max-width:20ch;margin:0 auto 24px}
+  .cta h2 em{font-style:italic;color:var(--gold);font-weight:500}
+  .cta .subscribe{display:flex;gap:10px;max-width:440px;margin:32px auto 0;background:var(--bg-soft);border:1px solid var(--line);border-radius:14px;padding:7px 7px 7px 18px}
+  .cta .subscribe input{flex:1;background:none;border:none;outline:none;color:var(--ink);font-size:15px}
+  .cta .subscribe input::placeholder{color:var(--ink-faint)}
+  .cta .subscribe button{background:var(--gold);color:#0a0a0f;border:none;border-radius:10px;padding:12px 22px;font-weight:600;cursor:pointer;font-family:var(--display)}
+  footer{border-top:1px solid var(--line-soft);padding:60px 5vw 50px;background:var(--bg)}
+  .foot-grid{max-width:1240px;margin:0 auto;display:grid;grid-template-columns:2fr 1fr 1fr 1fr;gap:40px}
+  @media(max-width:760px){.foot-grid{grid-template-columns:1fr 1fr}}
+  .foot-grid h5{font-family:var(--display);font-size:14px;margin-bottom:16px}
+  .foot-grid a{display:block;color:var(--ink-dim);font-size:14px;margin-bottom:10px;transition:color .2s}
+  .foot-grid a:hover{color:var(--gold)}
+  .foot-bottom{max-width:1240px;margin:44px auto 0;padding-top:24px;border-top:1px solid var(--line-soft);display:flex;justify-content:space-between;color:var(--ink-faint);font-size:13px;flex-wrap:wrap;gap:12px}
+
+  .reveal{opacity:0;transform:translateY(38px);transition:opacity .9s cubic-bezier(.16,1,.3,1),transform .9s cubic-bezier(.16,1,.3,1)}
+  .reveal.in{opacity:1;transform:none}
+  @media(prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none}.hero-bg .glowfield,.hero .eyebrow .dot{animation:none}*{scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<div class="grain"></div>
+
+<header>
+  <div class="brand"><div class="mark">L</div>LAP</div>
+  <button class="menu-toggle" id="menuToggle">菜单</button>
+</header>
+
+<div class="overlay" id="overlay">
+  <nav>
+    <a href="#hero"><span class="i">01</span>首页</a>
+    <a href="#gallery"><span class="i">02</span>作品</a>
+    <a href="#features"><span class="i">03</span>能力</a>
+    <a href="#product"><span class="i">04</span>方案</a>
+    <a href="#contact"><span class="i">05</span>联系</a>
+  </nav>
+  <div class="f"><span>业务合作 business@lap.ai</span><span>一般咨询 hello@lap.ai</span></div>
+</div>
+
+<!-- ① HERO -->
+<section class="hero" id="hero">
+  <div class="hero-watermark" aria-hidden="true">LAP</div>
+  <div class="hero-bg">
+    <div class="glowfield"></div>
+    <img class="hero-char" id="heroChar" src="assets/hero-char.png" alt="游戏角色主视觉" />
+  </div>
+  <div class="hero-inner">
+    <span class="eyebrow mono"><span class="dot"></span>游戏美术 AI 生产引擎</span>
+    <h1>为想象<em>而生</em>，<br>为产线<em>而建</em>。</h1>
+    <p class="sub">角色、场景、原画、3D、UI 图标。一句话到可入库资产，把数天的美术工作压进一杯咖啡的时间。</p>
+    <div class="cta-row">
+      <button class="btn btn-primary">开始创作</button>
+      <button class="btn btn-ghost"><span class="tri">▶</span>观看演示</button>
+    </div>
+  </div>
+  <div class="hero-meta"><span class="mono">LAP · No.001</span><span class="mono">滚动探索 ↓</span></div>
+</section>
+
+<!-- ② 作品画廊 -->
+<section class="block" id="gallery">
+  <span class="mono">精选作品</span>
+  <h2 class="sec-title" style="margin-top:14px">每一张，<br>都是可入库的<em>资产</em>。</h2>
+  <div class="gallery">
+    <div class="art a1"><img src="assets/hero-char.png" alt=""><div class="cap"><div class="t">霜羽剑姬</div><div class="k">角色立绘 · AI 生成</div></div></div>
+    <div class="art a2"><img src="assets/work-scene.png" alt=""><div class="cap"><div class="t">云海仙宫</div><div class="k">场景原画 · AI 生成</div></div></div>
+    <div class="art a3"><img src="assets/work-3d.png" alt=""><div class="cap"><div class="t">神兵法器</div><div class="k">3D 资产 · AI 生成</div></div></div>
+    <div class="art a4"><img src="assets/work-ui.png" alt=""><div class="cap"><div class="t">技能图标</div><div class="k">UI 资产</div></div></div>
+    <div class="art a4"><img src="assets/work-chibi.png" alt=""><div class="cap"><div class="t">Q 版角色</div><div class="k">角色设计</div></div></div>
+  </div>
+</section>
+
+<!-- ③ 交互实验室 -->
+<section class="block" id="lab">
+  <span class="mono">实时交互</span>
+  <h2 class="sec-title" style="margin-top:14px">调一调<em>温度</em>，<br>看风格如何生长。</h2>
+  <p class="sec-lead">和真实 AI 生成一样，温度越高越天马行空，越低越稳定可控。拖动滑块，感受创意与确定性之间的平衡。</p>
+  <div class="lab">
+    <div class="lab-panel">
+      <div class="prompt-box">
+        <input id="promptInput" value="身披霜羽、手持长剑的东方女武者" />
+        <button id="promptBtn">生成</button>
+      </div>
+      <div class="temp-wrap">
+        <div class="temp-head"><span class="mono">采样温度 TEMPERATURE</span><span class="val" id="tempVal">1.0</span></div>
+        <input type="range" id="tempRange" min="0" max="100" value="50" />
+        <div class="temp-ticks"><span>0.1 确定性</span><span>1.0 平衡</span><span>2.0 天马行空</span></div>
+      </div>
+      <div class="lab-readout" id="labReadout"></div>
+    </div>
+    <div class="lab-visual" id="labVisual">
+      <div class="styleimg on"></div><div class="styleimg"></div><div class="styleimg"></div>
+      <div class="tag" id="labTag">风格：写实 · 稳定</div>
+    </div>
+  </div>
+</section>
+
+<!-- ④ Features -->
+<section class="block" id="features">
+  <span class="mono">能力矩阵</span>
+  <h2 class="sec-title" style="margin-top:14px">一站覆盖<br>游戏美术<em>全品类</em>。</h2>
+  <div class="feat-grid">
+    <div class="feat c3 reveal"><div class="ic">✦</div><h3>角色设计</h3><p>立绘、三视图、表情差分、姿态控制，从概念到定稿。</p></div>
+    <div class="feat c3 reveal"><div class="ic">◳</div><h3>场景原画</h3><p>环境概念、关卡氛围、远近景层次一次到位。</p></div>
+    <div class="feat c2 reveal"><div class="ic">◈</div><h3>3D 资产</h3><p>文生 3D、图生网格，引擎直出。</p></div>
+    <div class="feat c2 reveal"><div class="ic">▦</div><h3>UI 图标</h3><p>界面框、技能图标、装饰纹样。</p></div>
+    <div class="feat c2 reveal"><div class="ic">◐</div><h3>材质贴图</h3><p>PBR 材质、无缝纹理、法线生成。</p></div>
+    <div class="feat c6 reveal"><div class="ic">⚡</div><h3>风格锁定 · 批量一致性生产</h3><p>锁定你项目的美术风格，成百上千张资产风格如一，团队协作零偏差。</p></div>
+  </div>
+</section>
+
+<!-- ⑤ Product -->
+<section class="block" id="product">
+  <span class="mono">方案</span>
+  <h2 class="sec-title" style="margin-top:14px">从独立开发者<br>到<em>专业工作室</em>。</h2>
+  <div class="plans">
+    <div class="plan reveal">
+      <div class="name">Free</div><div class="price">¥0<span> / 月</span></div>
+      <div class="desc">适合尝鲜与个人练手。</div>
+      <ul><li><span class="ck">✓</span>每月 200 张生成额度</li><li><span class="ck">✓</span>全品类生成</li><li><span class="ck">✓</span>标准分辨率导出</li><li><span class="ck">✓</span>社区风格库</li></ul>
+      <button class="btn btn-ghost" style="justify-content:center">免费开始</button>
+    </div>
+    <div class="plan featured reveal">
+      <div class="badge">最受欢迎</div><div class="name">Pro</div><div class="price">¥129<span> / 月</span></div>
+      <div class="desc">独立开发者的高效产线。</div>
+      <ul><li><span class="ck">✓</span>无限生成额度</li><li><span class="ck">✓</span>4K 高清 + 去背导出</li><li><span class="ck">✓</span>3D 网格 / FBX / GLB</li><li><span class="ck">✓</span>私有风格锁定</li><li><span class="ck">✓</span>优先算力队列</li></ul>
+      <button class="btn btn-primary" style="justify-content:center">升级 Pro</button>
+    </div>
+    <div class="plan reveal">
+      <div class="name">Studio</div><div class="price">定制<span> / 团队</span></div>
+      <div class="desc">工作室与美术中台。</div>
+      <ul><li><span class="ck">✓</span>专属私有产线部署</li><li><span class="ck">✓</span>团队协作与资产管理</li><li><span class="ck">✓</span>风格模型定制训练</li><li><span class="ck">✓</span>API 接入 & 引擎插件</li><li><span class="ck">✓</span>专属技术支持</li></ul>
+      <button class="btn btn-ghost" style="justify-content:center">联系我们</button>
+    </div>
+  </div>
+</section>
+
+<!-- ⑥ Reviews -->
+<section class="block" id="reviews">
+  <div class="rev-head"><span class="rev-score">4.9</span><div><div style="color:var(--gold);letter-spacing:3px">★★★★★</div><div style="color:var(--ink-dim);font-size:14px;margin-top:4px">来自 2,847 位创作者的评价</div></div></div>
+  <div class="rev-grid">
+    <div class="rev reveal"><div class="stars">★★★★★</div><p>"以前一个角色三视图要画两天，现在午休前就出了五版方案挑。团队出图效率直接翻倍。"</p><div class="who"><span class="av" style="background-image:url(https://i.pravatar.cc/80?img=12)"></span><div><div class="n">陈屿舟</div><div class="r">独立游戏主美</div></div></div></div>
+    <div class="rev reveal"><div class="stars">★★★★★</div><p>"风格锁定是真香。我们整个项目八百多张图标风格完全统一，外包都省了。"</p><div class="who"><span class="av" style="background-image:url(https://i.pravatar.cc/80?img=32)"></span><div><div class="n">林之遥</div><div class="r">手游工作室 TA</div></div></div></div>
+    <div class="rev reveal"><div class="stars">★★★★★</div><p>"作为不会画画的独立开发者，我第一次拥有了大厂级的美术资产。这就是我要的引擎。"</p><div class="who"><span class="av" style="background-image:url(https://i.pravatar.cc/80?img=51)"></span><div><div class="n">Marcus Vaughn</div><div class="r">Solo Developer</div></div></div></div>
+  </div>
+</section>
+
+<!-- ⑦ CTA + Footer -->
+<section class="cta" id="contact">
+  <h2>你的下一个游戏世界，<br>从<em>这一笔</em>开始。</h2>
+  <p style="color:var(--ink-dim);font-size:18px">免费开始，无需信用卡。工作室可申请定制私有产线。</p>
+  <div class="subscribe"><input placeholder="留下邮箱，抢先体验新功能" id="subEmail" /><button id="subBtn">订阅</button></div>
+</section>
+
+<footer>
+  <div class="foot-grid">
+    <div><div class="brand" style="margin-bottom:16px"><div class="mark">L</div>LAP</div><p style="color:var(--ink-dim);font-size:14px;max-width:34ch">专为游戏美术生产打造的 AI 引擎，让灵感即刻成为资产。</p></div>
+    <div><h5>产品</h5><a href="#features">角色设计</a><a href="#features">场景原画</a><a href="#features">3D 资产</a><a href="#product">方案价格</a></div>
+    <div><h5>资源</h5><a href="#">教程</a><a href="#">案例库</a><a href="#">API 文档</a><a href="#">更新日志</a></div>
+    <div><h5>联系</h5><a href="#">business@lap.ai</a><a href="#">hello@lap.ai</a><a href="#">微博</a><a href="#">B 站</a></div>
+  </div>
+  <div class="foot-bottom"><span>© 2026 LAP. 保留所有权利。</span><span>服务条款 · 隐私政策</span></div>
+</footer>
+
+<!-- GSAP：CDN 优先，失败则无动效降级（页面本身用 CSS reveal 兜底，不依赖JS也可读） -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script>
+/* 菜单 */
+const mt=document.getElementById('menuToggle'),ov=document.getElementById('overlay');
+mt.addEventListener('click',()=>{const o=ov.classList.toggle('open');mt.textContent=o?'关闭':'菜单';});
+ov.querySelectorAll('a').forEach(a=>a.addEventListener('click',()=>{ov.classList.remove('open');mt.textContent='菜单';}));
+
+/* Hero 视差：角色随鼠标轻移 */
+const heroChar=document.getElementById('heroChar');
+addEventListener('mousemove',e=>{const x=(e.clientX/innerWidth-.5),y=(e.clientY/innerHeight-.5);
+  if(heroChar)heroChar.style.transform=`translate(${x*-18}px,${y*-12}px)`;});
+
+/* 交互实验室 */
+(function(){
+  const range=document.getElementById('tempRange'),val=document.getElementById('tempVal'),
+    readout=document.getElementById('labReadout'),tag=document.getElementById('labTag'),
+    imgs=[...document.querySelectorAll('#labVisual .styleimg')],promptInput=document.getElementById('promptInput');
+  const styles=[
+    {img:'assets/work-3d.png',tag:'风格：写实 · 稳定',note:'低温：结果<b>稳定可控</b>，忠实还原你的描述，适合确定风格的量产。',fil:'saturate(.85) brightness(1)'},
+    {img:'assets/hero-char.png',tag:'风格：写实 · 平衡',note:'中温：在<b>忠实与创意</b>之间平衡，最常用的挡位。',fil:'saturate(1.05)'},
+    {img:'assets/work-scene.png',tag:'风格：奇幻 · 发散',note:'高温：结果<b>天马行空</b>，惊喜与意外并存，适合找灵感。',fil:'saturate(1.35) contrast(1.08) hue-rotate(-8deg)'},
+  ];
+  imgs.forEach((im,i)=>{im.style.backgroundImage='url('+styles[i].img+')';});
+  function apply(v){
+    const t=(v/100)*1.9+0.1;val.textContent=t.toFixed(1);
+    const k=v<34?0:(v<67?1:2);
+    imgs.forEach((im,i)=>{im.classList.toggle('on',i===k);if(i===k){im.style.filter=styles[k].fil;im.style.transform='scale('+(1+ (k===2?0.04:0))+')';}});
+    tag.textContent=styles[k].tag;
+    readout.innerHTML='当前提示词「<b>'+(promptInput.value||'…')+'</b>」<br>'+styles[k].note;
+  }
+  range.addEventListener('input',e=>apply(+e.target.value));
+  document.getElementById('promptBtn').addEventListener('click',()=>apply(+range.value));
+  promptInput.addEventListener('keydown',e=>{if(e.key==='Enter')apply(+range.value);});
+  apply(50);
+})();
+
+/* 订阅反馈 */
+(function(){const b=document.getElementById('subBtn');if(b)b.addEventListener('click',()=>{const i=document.getElementById('subEmail');if(i.value){b.textContent='已订阅 ✓';setTimeout(()=>b.textContent='订阅',2000);}});})();
+
+/* 滚动揭示：优先 GSAP，无则 IntersectionObserver 兜底（不依赖服务器/CDN也能工作） */
+addEventListener('load',()=>{
+  const reveals=[...document.querySelectorAll('.reveal')];
+  if(window.gsap&&window.ScrollTrigger){
+    gsap.registerPlugin(ScrollTrigger);
+    gsap.from('.hero .eyebrow',{y:20,autoAlpha:0,duration:.8});
+    gsap.from('.hero h1',{y:44,autoAlpha:0,duration:1,delay:.1});
+    gsap.from('.hero .sub',{y:30,autoAlpha:0,duration:1,delay:.35});
+    gsap.from('.hero .cta-row',{y:30,autoAlpha:0,duration:1,delay:.55});
+    gsap.from('.hero-char',{scale:1.06,autoAlpha:0,duration:1.4,ease:'power2.out'});
+    reveals.forEach(el=>gsap.to(el,{opacity:1,y:0,duration:.9,ease:'power3.out',scrollTrigger:{trigger:el,start:'top 86%'},onStart:()=>el.classList.add('in')}));
+    gsap.utils.toArray('.sec-title,.sec-lead').forEach(el=>gsap.from(el,{y:34,autoAlpha:0,duration:.9,ease:'power3.out',scrollTrigger:{trigger:el,start:'top 88%'}}));
+  }else{
+    // 无 GSAP：用 IntersectionObserver 触发 CSS reveal
+    const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}}),{threshold:.15});
+    reveals.forEach(el=>io.observe(el));
+  }
+});
+</script>
+</body>
+</html>

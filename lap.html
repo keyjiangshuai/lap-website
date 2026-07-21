@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>LAP · 游戏美术生成台</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Orbitron:wght@600;700;900&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#08080d;--bg-soft:#101018;--ink:#f4f1ea;--ink-dim:#948fa2;--ink-faint:#57535f;
+    --gold:#e8b04b;--gold-2:#ffd98a;--cyan:#3fe0d0;--line:rgba(255,255,255,.10);--line-soft:rgba(255,255,255,.06);
+    --glass:rgba(14,13,20,.6);
+    --brand:"Orbitron","Space Grotesk",sans-serif;
+    --display:"Space Grotesk","PingFang SC","Microsoft YaHei",sans-serif;
+    --sans:"PingFang SC","Microsoft YaHei","Helvetica Neue",sans-serif;
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--ink);font-family:var(--sans);line-height:1.6;overflow-x:hidden;-webkit-font-smoothing:antialiased}
+  ::selection{background:var(--gold);color:#08080d}
+  button,input{font-family:inherit}
+  a{color:inherit;text-decoration:none;cursor:pointer}
+  .mono{font-family:var(--display);font-size:12px;letter-spacing:.24em;text-transform:uppercase;color:var(--ink-dim)}
+
+  .grain{position:fixed;inset:0;z-index:400;pointer-events:none;opacity:.045;mix-blend-mode:overlay;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='2'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23n)'/%3E%3C/svg%3E")}
+
+  header{position:fixed;top:0;left:0;right:0;z-index:300;display:flex;align-items:center;justify-content:space-between;padding:20px 5vw}
+  .brand{display:flex;align-items:center;gap:11px;font-family:var(--brand);font-size:19px;font-weight:700;letter-spacing:.14em}
+  .brand .mark{width:32px;height:32px;border-radius:8px;background:linear-gradient(135deg,var(--gold),var(--gold-2));display:grid;place-items:center;color:#08080d;font-size:15px;font-weight:900;font-family:var(--brand)}
+  .navlinks{display:flex;gap:28px}
+  .navlinks a{font-size:14px;color:var(--ink-dim);transition:color .3s}
+  .navlinks a:hover{color:var(--ink)}
+  @media(max-width:760px){.navlinks{display:none}}
+
+  /* ============ 生成台（首屏主角） ============ */
+  .studio{min-height:100dvh;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:100px 5vw 60px;position:relative;text-align:center}
+  #particles{position:absolute;inset:0;z-index:0;pointer-events:none}
+  .studio-inner{position:relative;z-index:3;width:100%;max-width:900px}
+  .studio .kicker{margin-bottom:20px}
+  .studio h1{font-family:var(--display);font-size:clamp(30px,5vw,64px);font-weight:600;line-height:1.05;letter-spacing:-.02em;margin-bottom:14px}
+  .studio h1 em{font-style:normal;color:var(--gold)}
+  .studio .hint{color:var(--ink-dim);font-size:15px;margin-bottom:40px}
+
+  /* 关键词选择器 */
+  .tag-groups{display:flex;flex-direction:column;gap:16px;margin-bottom:32px}
+  .tag-row{display:flex;gap:10px;flex-wrap:wrap;justify-content:center;align-items:center}
+  .tag-row .lbl{font-family:var(--display);font-size:11px;letter-spacing:.2em;text-transform:uppercase;color:var(--ink-faint);width:74px;text-align:right}
+  @media(max-width:600px){.tag-row .lbl{width:100%;text-align:center}}
+  .tag{padding:9px 18px;border-radius:999px;border:1px solid var(--line);background:rgba(255,255,255,.02);color:var(--ink-dim);font-size:14px;cursor:pointer;transition:all .25s}
+  .tag:hover{border-color:var(--ink-dim);color:var(--ink)}
+  .tag.on{background:var(--gold);border-color:var(--gold);color:#08080d;font-weight:600}
+
+  .gen-btn{margin-top:8px;font-family:var(--display);font-weight:600;font-size:16px;letter-spacing:.02em;padding:17px 44px;border-radius:999px;border:none;background:var(--gold);color:#08080d;cursor:pointer;transition:transform .2s,box-shadow .3s;display:inline-flex;align-items:center;gap:12px}
+  .gen-btn:hover{transform:translateY(-2px);box-shadow:0 16px 40px rgba(232,176,75,.35)}
+  .gen-btn:active{transform:scale(.97)}
+  .gen-btn:focus-visible{outline:2px solid var(--gold);outline-offset:3px}
+  .gen-btn:disabled{opacity:.5;cursor:not-allowed;transform:none;box-shadow:none}
+  .gen-btn .spark{display:inline-block}
+
+  /* 生成舞台画布 */
+  .stage-frame{margin:44px auto 0;width:min(420px,86vw);aspect-ratio:3/4;border-radius:20px;position:relative;overflow:hidden;
+    border:1px solid var(--line);background:#000;box-shadow:0 40px 120px rgba(0,0,0,.6)}
+  .stage-frame .slot{position:absolute;inset:0;background-size:cover;background-position:center;opacity:0;transform:scale(1.06);transition:opacity .1s}
+  .stage-frame .slot.show{opacity:1;transform:scale(1);transition:opacity 1.1s ease,transform 1.4s ease}
+  /* 显影扫描线 */
+  .scanline{position:absolute;left:0;right:0;height:3px;top:0;z-index:5;
+    background:linear-gradient(90deg,transparent,var(--cyan),transparent);box-shadow:0 0 20px var(--cyan);opacity:0}
+  .stage-frame.gen .scanline{opacity:1;animation:scan 1.6s ease-in-out}
+  @keyframes scan{0%{top:0}100%{top:100%}}
+  /* 显影遮罩(生成时从下往上揭开) */
+  .stage-frame .reveal-mask{position:absolute;inset:0;z-index:4;background:linear-gradient(0deg,transparent,#000 60%);transform:translateY(0);transition:none}
+  .stage-frame.done .reveal-mask{transform:translateY(-105%);transition:transform 1.3s cubic-bezier(.7,0,.2,1)}
+  .stage-frame .empty{position:absolute;inset:0;z-index:2;display:grid;place-items:center;color:var(--ink-faint);font-size:14px;flex-direction:column;gap:12px;text-align:center;padding:20px}
+  .stage-frame .empty .ic{font-size:34px;opacity:.4}
+  .stage-frame .fcap{position:absolute;left:16px;bottom:14px;z-index:6;background:var(--glass);border:1px solid var(--line);border-radius:8px;padding:6px 12px;font-size:12px;color:var(--gold-2);backdrop-filter:blur(6px);opacity:0;transition:opacity .5s}
+  .stage-frame.done .fcap{opacity:1}
+  .gen-status{margin-top:18px;font-family:var(--display);font-size:13px;letter-spacing:.1em;color:var(--cyan);min-height:1.4em;text-transform:uppercase}
+
+  /* 作品流（生成累积） */
+  .stream-wrap{position:relative;z-index:3;width:100%;overflow:hidden;margin-top:10px}
+  .stream{display:flex;gap:14px;padding:10px 5vw;transition:transform .6s cubic-bezier(.2,.7,.3,1)}
+  .stream .thumb{flex:0 0 auto;width:120px;height:150px;border-radius:12px;overflow:hidden;border:1px solid var(--line);background-size:cover;background-position:center;opacity:0;transform:translateY(20px) scale(.9);animation:pop .6s forwards}
+  @keyframes pop{to{opacity:1;transform:none}}
+
+  /* ============ 下方信息区 ============ */
+  section.block{padding:min(14vh,120px) 5vw;max-width:1200px;margin:0 auto}
+  .sec-title{font-family:var(--display);font-size:clamp(28px,4.4vw,58px);font-weight:600;line-height:1.06;letter-spacing:-.02em;max-width:18ch}
+  .sec-title em{font-style:normal;color:var(--gold)}
+  .sec-lead{margin-top:18px;color:var(--ink-dim);font-size:clamp(15px,1.5vw,18px);max-width:54ch}
+
+  .feat-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:14px;margin-top:46px}
+  .feat{border:1px solid var(--line);border-radius:18px;padding:24px;background:var(--bg-soft);min-height:180px;display:flex;flex-direction:column;justify-content:flex-end;transition:transform .4s,border-color .4s}
+  .feat:hover{transform:translateY(-6px);border-color:var(--gold)}
+  .feat .ic{font-size:22px;margin-bottom:auto;color:var(--gold)}
+  .feat h3{font-family:var(--display);font-size:20px;font-weight:600;margin-bottom:6px}
+  .feat p{font-size:13px;color:var(--ink-dim)}
+  .feat.c3{grid-column:span 3}.feat.c2{grid-column:span 2}
+  @media(max-width:900px){.feat-grid{grid-template-columns:1fr}.feat{grid-column:span 1!important}}
+
+  .plans{display:grid;grid-template-columns:repeat(3,1fr);gap:18px;margin-top:46px}
+  @media(max-width:900px){.plans{grid-template-columns:1fr}}
+  .plan{border:1px solid var(--line);border-radius:20px;padding:30px;background:var(--bg-soft);display:flex;flex-direction:column;transition:transform .3s}
+  .plan:hover{transform:translateY(-6px)}
+  .plan.featured{border-color:var(--gold);background:linear-gradient(180deg,rgba(232,176,75,.08),var(--bg-soft))}
+  .plan .name{font-family:var(--display);font-size:14px;letter-spacing:.06em;text-transform:uppercase;color:var(--ink-dim)}
+  .plan .price{font-family:var(--display);font-size:42px;font-weight:600;margin:12px 0 4px;letter-spacing:-.02em}
+  .plan .price span{font-size:15px;color:var(--ink-dim);font-weight:400}
+  .plan .desc{color:var(--ink-dim);font-size:13px;margin-bottom:22px}
+  .plan ul{list-style:none;display:flex;flex-direction:column;gap:11px;margin-bottom:26px;flex:1}
+  .plan li{font-size:14px;display:flex;gap:9px}
+  .plan li .ck{color:var(--gold);font-weight:700}
+  .plan .badge{align-self:flex-start;font-size:11px;color:var(--gold);border:1px solid var(--gold);border-radius:999px;padding:4px 11px;margin-bottom:12px;font-family:var(--display);letter-spacing:.06em}
+  .pbtn{font-family:var(--display);font-weight:500;font-size:14px;padding:13px 24px;border-radius:999px;cursor:pointer;border:1px solid var(--line);background:transparent;color:var(--ink);transition:all .25s;text-align:center}
+  .pbtn:hover{border-color:var(--gold);color:var(--gold)}
+  .pbtn.solid{background:var(--gold);color:#08080d;border-color:var(--gold)}
+  .pbtn.solid:hover{transform:translateY(-2px)}
+  .pbtn:active{transform:scale(.97)}
+
+  .cta{text-align:center;padding:min(16vh,140px) 6vw}
+  .cta h2{font-family:var(--display);font-size:clamp(30px,5vw,70px);font-weight:600;letter-spacing:-.025em;line-height:1.03;max-width:18ch;margin:0 auto 22px}
+  .cta h2 em{font-style:normal;color:var(--gold)}
+  .cta .subscribe{display:flex;gap:10px;max-width:420px;margin:30px auto 0;background:var(--bg-soft);border:1px solid var(--line);border-radius:14px;padding:7px 7px 7px 18px}
+  .cta .subscribe input{flex:1;background:none;border:none;outline:none;color:var(--ink);font-size:15px}
+  .cta .subscribe button{background:var(--gold);color:#08080d;border:none;border-radius:10px;padding:12px 22px;font-weight:600;cursor:pointer;font-family:var(--display)}
+
+  footer{border-top:1px solid var(--line-soft);padding:50px 5vw 44px}
+  .foot-grid{max-width:1200px;margin:0 auto;display:grid;grid-template-columns:2fr 1fr 1fr;gap:36px}
+  @media(max-width:760px){.foot-grid{grid-template-columns:1fr 1fr}}
+  .foot-grid h5{font-family:var(--display);font-size:14px;margin-bottom:14px}
+  .foot-grid a{display:block;color:var(--ink-dim);font-size:14px;margin-bottom:9px;transition:color .2s}
+  .foot-grid a:hover{color:var(--gold)}
+  .foot-bottom{max-width:1200px;margin:40px auto 0;padding-top:22px;border-top:1px solid var(--line-soft);display:flex;justify-content:space-between;color:var(--ink-faint);font-size:13px;flex-wrap:wrap;gap:10px}
+
+  .reveal{opacity:0;transform:translateY(34px);transition:opacity .9s cubic-bezier(.16,1,.3,1),transform .9s cubic-bezier(.16,1,.3,1)}
+  .reveal.in{opacity:1;transform:none}
+  @media(prefers-reduced-motion:reduce){.reveal{opacity:1;transform:none}.stage-frame.gen .scanline{animation:none}*{scroll-behavior:auto!important}}
+</style>
+</head>
+<body>
+<div class="grain"></div>
+
+<header>
+  <div class="brand"><div class="mark">L</div>LAP</div>
+  <div class="navlinks"><a href="#studio">生成台</a><a href="#features">能力</a><a href="#product">方案</a><a href="#contact">联系</a></div>
+</header>
+
+<!-- ============ 生成台：首屏主角 ============ -->
+<section class="studio" id="studio">
+  <canvas id="particles"></canvas>
+  <div class="studio-inner">
+    <div class="kicker mono">LAP 生成台 · 上手即玩</div>
+    <h1>选几个词，<em>生成</em>你的游戏美术。</h1>
+    <p class="hint">这不是演示——这就是 LAP 的核心。挑选下面的关键词，按下生成，看它在你眼前显影成型。</p>
+
+    <div class="tag-groups" id="tagGroups">
+      <div class="tag-row"><span class="lbl">品类</span>
+        <button class="tag on" data-g="cat" data-v="角色">角色</button>
+        <button class="tag" data-g="cat" data-v="场景">场景</button>
+        <button class="tag" data-g="cat" data-v="3D道具">3D 道具</button>
+        <button class="tag" data-g="cat" data-v="UI图标">UI 图标</button>
+      </div>
+      <div class="tag-row"><span class="lbl">风格</span>
+        <button class="tag on" data-g="sty" data-v="东方幻想">东方幻想</button>
+        <button class="tag" data-g="sty" data-v="写实">写实</button>
+        <button class="tag" data-g="sty" data-v="Q版可爱">Q 版可爱</button>
+        <button class="tag" data-g="sty" data-v="赛博朋克">赛博朋克</button>
+      </div>
+      <div class="tag-row"><span class="lbl">氛围</span>
+        <button class="tag on" data-g="mood" data-v="史诗">史诗</button>
+        <button class="tag" data-g="mood" data-v="神秘">神秘</button>
+        <button class="tag" data-g="mood" data-v="热血">热血</button>
+        <button class="tag" data-g="mood" data-v="治愈">治愈</button>
+      </div>
+    </div>
+
+    <button class="gen-btn" id="genBtn"><span class="spark">✦</span>生成美术资产</button>
+
+    <div class="stage-frame" id="stage">
+      <div class="empty" id="stageEmpty"><div class="ic">✦</div><div>选好关键词，按下生成<br>作品将在这里显影</div></div>
+      <div class="slot" id="stageSlot"></div>
+      <div class="reveal-mask"></div>
+      <div class="scanline"></div>
+      <div class="fcap" id="stageCap"></div>
+    </div>
+    <div class="gen-status" id="genStatus"></div>
+  </div>
+</section>
+
+<!-- 作品流 -->
+<div class="stream-wrap"><div class="stream" id="stream"></div></div>
+
+<!-- ============ 能力 ============ -->
+<section class="block" id="features">
+  <span class="mono">能力矩阵</span>
+  <h2 class="sec-title" style="margin-top:14px">你刚才玩的，<br>只是<em>冰山一角</em>。</h2>
+  <div class="feat-grid">
+    <div class="feat c3 reveal"><div class="ic">✦</div><h3>角色设计</h3><p>立绘、三视图、表情差分、姿态控制，从概念到定稿。</p></div>
+    <div class="feat c3 reveal"><div class="ic">◳</div><h3>场景原画</h3><p>环境概念、关卡氛围、远近景层次一次到位。</p></div>
+    <div class="feat c2 reveal"><div class="ic">◈</div><h3>3D 资产</h3><p>文生 3D、图生网格，引擎直出。</p></div>
+    <div class="feat c2 reveal"><div class="ic">▦</div><h3>UI 图标</h3><p>界面框、技能图标、装饰纹样。</p></div>
+    <div class="feat c2 reveal"><div class="ic">◐</div><h3>材质贴图</h3><p>PBR 材质、无缝纹理、法线生成。</p></div>
+  </div>
+</section>
+
+<!-- ============ 方案 ============ -->
+<section class="block" id="product">
+  <span class="mono">方案</span>
+  <h2 class="sec-title" style="margin-top:14px">从独立开发者<br>到<em>专业工作室</em>。</h2>
+  <div class="plans">
+    <div class="plan reveal"><div class="name">Free</div><div class="price">¥0<span> / 月</span></div><div class="desc">尝鲜与个人练手。</div>
+      <ul><li><span class="ck">✓</span>每月 200 张额度</li><li><span class="ck">✓</span>全品类生成</li><li><span class="ck">✓</span>标准分辨率</li><li><span class="ck">✓</span>社区风格库</li></ul>
+      <div class="pbtn">免费开始</div></div>
+    <div class="plan featured reveal"><div class="badge">最受欢迎</div><div class="name">Pro</div><div class="price">¥129<span> / 月</span></div><div class="desc">独立开发者的产线。</div>
+      <ul><li><span class="ck">✓</span>无限生成额度</li><li><span class="ck">✓</span>4K + 去背导出</li><li><span class="ck">✓</span>3D / FBX / GLB</li><li><span class="ck">✓</span>私有风格锁定</li><li><span class="ck">✓</span>优先算力</li></ul>
+      <div class="pbtn solid">升级 Pro</div></div>
+    <div class="plan reveal"><div class="name">Studio</div><div class="price">定制<span> / 团队</span></div><div class="desc">工作室与美术中台。</div>
+      <ul><li><span class="ck">✓</span>私有产线部署</li><li><span class="ck">✓</span>团队协作管理</li><li><span class="ck">✓</span>风格定制训练</li><li><span class="ck">✓</span>API & 引擎插件</li><li><span class="ck">✓</span>专属支持</li></ul>
+      <div class="pbtn">联系我们</div></div>
+  </div>
+</section>
+
+<!-- ============ CTA + Footer ============ -->
+<section class="cta" id="contact">
+  <h2>你的下一个游戏世界，<br>从<em>刚才那一下</em>开始。</h2>
+  <p style="color:var(--ink-dim);font-size:17px">免费开始，无需信用卡。工作室可申请定制私有产线。</p>
+  <div class="subscribe"><input placeholder="留下邮箱，抢先体验" id="subEmail" /><button id="subBtn">订阅</button></div>
+</section>
+
+<footer>
+  <div class="foot-grid">
+    <div><div class="brand" style="margin-bottom:14px"><div class="mark">L</div>LAP</div><p style="color:var(--ink-dim);font-size:14px;max-width:32ch">专为游戏美术生产打造的 AI 引擎，让灵感即刻成为资产。</p></div>
+    <div><h5>产品</h5><a href="#features">角色设计</a><a href="#features">场景原画</a><a href="#product">方案价格</a></div>
+    <div><h5>联系</h5><a href="#">business@lap.ai</a><a href="#">hello@lap.ai</a><a href="#">B 站</a></div>
+  </div>
+  <div class="foot-bottom"><span>© 2026 LAP. 保留所有权利。</span><span>服务条款 · 隐私政策</span></div>
+</footer>
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/gsap.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/gsap/3.12.5/ScrollTrigger.min.js"></script>
+<script>
+/* ============ 关键词选择（同组单选，可切换） ============ */
+const sel={cat:'角色',sty:'东方幻想',mood:'史诗'};
+document.getElementById('tagGroups').addEventListener('click',e=>{
+  const t=e.target.closest('.tag');if(!t)return;
+  const g=t.dataset.g;
+  t.parentElement.querySelectorAll('[data-g="'+g+'"]').forEach(x=>x.classList.remove('on'));
+  t.classList.add('on');sel[g]=t.dataset.v;
+});
+
+/* ============ 生成结果池（用真实作品图 + 依据品类匹配） ============ */
+const POOL={
+  '角色':[{img:'assets/hero-char.png',n:'霜羽剑姬'},{img:'assets/work-chibi.png',n:'Q 版冒险者'}],
+  '场景':[{img:'assets/work-scene.png',n:'云海仙宫'}],
+  '3D道具':[{img:'assets/work-3d.png',n:'神兵法器'}],
+  'UI图标':[{img:'assets/work-ui.png',n:'技能图标组'}],
+};
+const ALL=[].concat(...Object.values(POOL));
+
+/* ============ 生成交互 ============ */
+const stage=document.getElementById('stage'),slot=document.getElementById('stageSlot'),
+  cap=document.getElementById('stageCap'),status=document.getElementById('genStatus'),
+  empty=document.getElementById('stageEmpty'),genBtn=document.getElementById('genBtn'),
+  stream=document.getElementById('stream');
+const STEPS=['解析关键词…','匹配风格模型…','采样生成中…','渲染显影…'];
+let busy=false;
+function pick(){const arr=POOL[sel.cat]||ALL;return arr[Math.floor(Math.random()*arr.length)];}
+function generate(){
+  if(busy)return;busy=true;genBtn.disabled=true;
+  empty.style.display='none';
+  const res=pick();
+  // 状态文字轮播
+  let s=0;status.textContent=STEPS[0];
+  const si=setInterval(()=>{s++;if(s<STEPS.length)status.textContent=STEPS[s];},420);
+  // 预载图 + 开始扫描
+  slot.style.backgroundImage='url('+res.img+')';
+  slot.classList.remove('show');stage.classList.remove('done');stage.classList.add('gen');
+  burst(); // 粒子汇聚
+  setTimeout(()=>{
+    stage.classList.remove('gen');stage.classList.add('done');
+    slot.classList.add('show');
+    cap.textContent=sel.sty+' · '+sel.mood+' · '+res.n;
+  },1600);
+  setTimeout(()=>{
+    clearInterval(si);status.textContent='生成完成 ✓';
+    addToStream(res);busy=false;genBtn.disabled=false;
+    setTimeout(()=>{if(!busy)status.textContent='';},1800);
+  },2900);
+}
+function addToStream(res){
+  const d=document.createElement('div');d.className='thumb';d.style.backgroundImage='url('+res.img+')';
+  d.title=res.n;stream.prepend(d);
+  const items=stream.querySelectorAll('.thumb');if(items.length>16)items[items.length-1].remove();
+}
+genBtn.addEventListener('click',generate);
+
+/* ============ 粒子背景 + 生成汇聚 ============ */
+const cv=document.getElementById('particles'),ctx=cv.getContext('2d');
+let W,H,parts=[],converge=0;
+function resize(){W=cv.width=cv.offsetWidth;H=cv.height=cv.offsetHeight;}
+function init(){parts=[];for(let i=0;i<90;i++)parts.push({x:Math.random()*W,y:Math.random()*H,r:Math.random()*1.8+.4,vx:(Math.random()-.5)*.3,vy:(Math.random()-.5)*.3,a:Math.random()});}
+function burst(){converge=1;} // 触发向中心汇聚
+function loop(){
+  ctx.clearRect(0,0,W,H);
+  const cx=W/2,cy=H*0.52;
+  parts.forEach(p=>{
+    if(converge>0){const dx=cx-p.x,dy=cy-p.y;p.x+=dx*0.04*converge;p.y+=dy*0.04*converge;}
+    else{p.x+=p.vx;p.y+=p.vy;if(p.x<0||p.x>W)p.vx*=-1;if(p.y<0||p.y>H)p.vy*=-1;}
+    p.a+=.02;
+    const o=(Math.sin(p.a)*.4+.5)*(converge>0?.9:.5);
+    ctx.beginPath();ctx.arc(p.x,p.y,p.r,0,7);ctx.fillStyle='rgba(232,176,75,'+o+')';ctx.fill();
+  });
+  if(converge>0){converge-=0.012;if(converge<0){converge=0;init();}}
+  requestAnimationFrame(loop);
+}
+resize();init();loop();addEventListener('resize',()=>{resize();init();});
+
+/* ============ 订阅反馈 ============ */
+(function(){const b=document.getElementById('subBtn');if(b)b.addEventListener('click',()=>{const i=document.getElementById('subEmail');if(i.value){b.textContent='已订阅 ✓';setTimeout(()=>b.textContent='订阅',2000);}});})();
+
+/* ============ 滚动揭示（GSAP优先，IO兜底） ============ */
+addEventListener('load',()=>{
+  const reveals=[...document.querySelectorAll('.reveal')];
+  if(window.gsap&&window.ScrollTrigger){
+    gsap.registerPlugin(ScrollTrigger);
+    reveals.forEach(el=>gsap.to(el,{opacity:1,y:0,duration:.9,ease:'power3.out',scrollTrigger:{trigger:el,start:'top 88%'},onStart:()=>el.classList.add('in')}));
+    gsap.utils.toArray('.sec-title,.sec-lead').forEach(el=>gsap.from(el,{y:32,autoAlpha:0,duration:.9,ease:'power3.out',scrollTrigger:{trigger:el,start:'top 90%'}}));
+  }else{
+    const io=new IntersectionObserver(es=>es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}}),{threshold:.15});
+    reveals.forEach(el=>io.observe(el));
+  }
+});
+</script>
+</body>
+</html>
