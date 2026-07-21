@@ -81,7 +81,7 @@
   .wf-copy h2{font-family:var(--huge);font-size:clamp(40px,4.2vw,64px);line-height:.9;font-weight:400;letter-spacing:.01em;color:var(--lime);white-space:nowrap;flex:none}
   .wf-copy p{margin-top:10px;max-width:680px;font-family:var(--display);font-size:clamp(13px,1.1vw,17px);line-height:1.3;color:#f4f4f2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
   .wf-viewport{position:absolute;left:1.6vw;right:0;top:24vh;height:64vh;z-index:3;overflow:hidden}
-  .wf-canvas{position:absolute;left:80px;top:0;width:2260px;height:100%;will-change:transform}
+  .wf-canvas{position:absolute;left:80px;top:0;width:1600px;height:100%;will-change:transform}
   .wf-node{position:absolute;width:210px;opacity:0;transform:translateX(-50px)}
   .wf-node.wide{width:320px}
   .wf-tag{font-family:var(--mono);font-size:10px;color:#d8d8d8;margin:0 0 8px 4px;display:flex;align-items:center;gap:6px}
@@ -92,15 +92,13 @@
   .wf-chip::before{content:'';width:12px;height:12px;border-radius:50%;background:#474747;display:inline-block;flex:none}
   .wf-line{position:absolute;height:2px;background:#777;opacity:0;transform-origin:left center;z-index:-1}
   .wf-line span{position:absolute;left:50%;top:-18px;transform:translateX(-50%);font-family:var(--mono);font-size:10px;color:#dedede;background:#101113;padding:0 5px}
-  /* 节点位置：两行交错 7 个（下行 top:284） */
-  .wf-n1{left:0;top:0}.wf-n2{left:285px;top:284px}.wf-n3{left:570px;top:0}.wf-n4{left:860px;top:284px}.wf-n5{left:1180px;top:0}.wf-n6{left:1530px;top:284px}.wf-n7{left:1880px;top:0}
-  /* 连线：发出=右边中点(y=93/377)；接收=下行上边中点(y=284) / 上行底边中点(y=186) */
-  .wf-l1{left:210px;top:93px;width:269px;transform:rotate(50deg)}
-  .wf-l2{left:495px;top:377px;width:313px;transform:rotate(-41deg)}
-  .wf-l3{left:780px;top:93px;width:273px;transform:rotate(49deg)}
-  .wf-l4{left:1070px;top:377px;width:369px;transform:rotate(-34deg)}
-  .wf-l5{left:1500px;top:93px;width:251px;transform:rotate(55deg)}
-  .wf-l6{left:1740px;top:377px;width:390px;transform:rotate(-32deg)}
+  /* 节点位置：两行交错 5 个（下行 top:284） */
+  .wf-n1{left:0;top:0}.wf-n2{left:340px;top:284px}.wf-n3{left:680px;top:0}.wf-n4{left:1020px;top:284px}.wf-n5{left:1360px;top:0}
+  /* 连线：4 条（n1→n2, n2→n3, n3→n4, n4→n5） */
+  .wf-l1{left:210px;top:93px;width:340px;transform:rotate(42deg)}
+  .wf-l2{left:550px;top:377px;width:340px;transform:rotate(-42deg)}
+  .wf-l3{left:890px;top:93px;width:340px;transform:rotate(42deg)}
+  .wf-l4{left:1230px;top:377px;width:340px;transform:rotate(-42deg)}
 
   /* Agent（参考 grid 版：Three.js 玻璃小球 + 眼睛跟随 + 聊天气泡随滚动逐条显示） */
   .agent-sec{position:relative;min-height:100vh;background:#050607;color:var(--ink);overflow:hidden;display:grid;place-items:center}
@@ -268,8 +266,6 @@
       <div class="wf-line wf-l2"><span>Text</span></div>
       <div class="wf-line wf-l3"><span>Image</span></div>
       <div class="wf-line wf-l4"><span>Video</span></div>
-      <div class="wf-line wf-l5"><span>Feedback</span></div>
-      <div class="wf-line wf-l6"><span>Video</span></div>
       <div class="wf-node wf-n1">
         <div class="wf-tag">▣ Image Gen</div>
         <div class="wf-card"><div class="center-icon">▧</div></div>
@@ -285,22 +281,12 @@
         <div class="wf-card"><div class="center-icon">▧</div></div>
         <div class="wf-chip">Midjourney V8.1  2K · 1:1 · 1</div>
       </div>
-      <div class="wf-node wf-n4">
-        <div class="wf-tag">▣ Image Gen</div>
-        <div class="wf-card"><div class="center-icon">▧</div></div>
-        <div class="wf-chip">Midjourney V8.1  2K · 1:1 · 1</div>
+      <div class="wf-node wf-n4 wide">
+        <div class="wf-tag">▣ Video Gen</div>
+        <div class="wf-card"><div class="center-icon play"></div></div>
+        <div class="wf-chip">Seedance2.0Mini  720p · Auto</div>
       </div>
       <div class="wf-node wf-n5 wide">
-        <div class="wf-tag">▣ Video Gen</div>
-        <div class="wf-card"><div class="center-icon play"></div></div>
-        <div class="wf-chip">Seedance2.0Mini  720p · Auto</div>
-      </div>
-      <div class="wf-node wf-n6 wide">
-        <div class="wf-tag">▣ Video Gen</div>
-        <div class="wf-card"><div class="center-icon play"></div></div>
-        <div class="wf-chip">Seedance2.0Mini  720p · Auto</div>
-      </div>
-      <div class="wf-node wf-n7 wide">
         <div class="wf-tag">▣ Video Gen</div>
         <div class="wf-card"><div class="center-icon play"></div></div>
         <div class="wf-chip">Seedance2.0Mini  1080p · Final Output</div>
@@ -325,12 +311,9 @@
     </div>
   </div>
   <div class="agent-chat" id="agentChat">
-    <div class="chat-bubble">HELLO!</div>
-    <div class="chat-bubble">WHAT CAN I HELP YOU?</div>
     <div class="chat-bubble">GENERATE A GAME CHARACTER</div>
     <div class="chat-bubble">ON IT — RENDERING NOW</div>
     <div class="chat-bubble">NEED A 3D MODEL TOO?</div>
-    <div class="chat-bubble">IM ON MY WAY!</div>
   </div>
 </section>
 
@@ -637,9 +620,9 @@
     const wfViewport=wfSec.querySelector('.wf-viewport');
     const wfNodes=wfSec.querySelectorAll('.wf-node');
     const wfLines=wfSec.querySelectorAll('.wf-line');
-    const wfLast=wfSec.querySelector('.wf-n7');
+    const wfLast=wfSec.querySelector('.wf-n5');
     const wfTl=gsap.timeline({
-      scrollTrigger:{trigger:wfSec,start:'top 57px',end:'+=2400',scrub:1,pin:true,anticipatePin:1,pinSpacing:true}
+      scrollTrigger:{trigger:wfSec,start:'top 57px',end:'+=1800',scrub:1,pin:true,anticipatePin:1,pinSpacing:true}
     });
     // 节点逐个从左侧滑入
     wfTl.fromTo(wfNodes,{x:-70,opacity:0},{x:0,opacity:1,duration:.42,stagger:.16,ease:'power2.out'},.08);
@@ -713,9 +696,10 @@
     const bubbles=[...agentChat.querySelectorAll('.chat-bubble')];
     const VISIBLE=3,ROW=82;
     ScrollTrigger.create({
-      trigger:agentSecEl,start:'top top',end:'+=1800',scrub:1,pin:true,anticipatePin:1,
+      trigger:agentSecEl,start:'top top',end:'+=1000',scrub:1,pin:true,anticipatePin:1,
       onUpdate:self=>{
-        const head=self.progress*(bubbles.length+VISIBLE-2);
+        // 3 条气泡全部可见后停止滚动（head 最大 = bubbles.length - 1）
+        const head=Math.min(self.progress,0.75)*(bubbles.length+VISIBLE-2);
         bubbles.forEach((b,i)=>{
           const slot=head-i;let op=0;
           if(slot>=-0.5&&slot<VISIBLE-0.5){const inF=Math.min(1,(slot+0.5)*1.6);const outF=Math.min(1,(VISIBLE-0.5-slot)*1.6);op=Math.max(0,Math.min(inF,outF));}
@@ -874,7 +858,7 @@
 
     let lastP=0;  // 记录上一帧 progress，用于识别 pin 切换的假跳变
     ScrollTrigger.create({
-      trigger:genSec,start:'top 57px',end:'+=2800',scrub:1,pin:true,anticipatePin:1,pinSpacing:true,
+      trigger:genSec,start:'top 57px',end:'+=1600',scrub:1,pin:true,anticipatePin:1,pinSpacing:true,
       onLeaveBack:()=>{
         // 回滚离开叙事：重置叙事 UI，由 _exitNarrative 统一清除卡片/图片变换并恢复 Cover Flow
         gsap.set(genHead,{opacity:1});
@@ -948,7 +932,7 @@
     gsap.set([...links,...xs],{opacity:0});
     gsap.set(pts,{opacity:0,x:30});
 
-    const tl=gsap.timeline({scrollTrigger:{trigger:secSec,start:'top 57px',end:'+=1600',scrub:1,pin:true,anticipatePin:1,
+    const tl=gsap.timeline({scrollTrigger:{trigger:secSec,start:'top 57px',end:'+=1200',scrub:1,pin:true,anticipatePin:1,
       onUpdate:(self)=>{
         // 向上回滚时不反向播放，强制保持最终态
         if(self.direction===-1){ tl.progress(1); }
