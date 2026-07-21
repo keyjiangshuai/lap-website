@@ -1,0 +1,986 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>LAP · Game Asset Agent</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Space+Grotesk:wght@400;500;600;700&family=JetBrains+Mono:wght@500;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --bg:#050506;--panel:#0e0f11;--panel2:#141518;--ink:#f2f2f0;--muted:#8a8a90;
+    --lime:#c6f24e;--line:rgba(255,255,255,.1);
+    --huge:"Anton","Space Grotesk",sans-serif;
+    --display:"Space Grotesk","PingFang SC","Microsoft YaHei",sans-serif;
+    --mono:"JetBrains Mono",monospace;
+    --pad:clamp(20px,5vw,90px);
+  }
+  *{margin:0;padding:0;box-sizing:border-box}
+  html{scroll-behavior:smooth}
+  body{background:var(--bg);color:var(--ink);font-family:var(--display);overflow-x:hidden;-webkit-font-smoothing:antialiased}
+  button{font-family:inherit;cursor:pointer} a{color:inherit;text-decoration:none}
+  ::selection{background:var(--lime);color:#000}
+  section{position:relative}
+  .wrap{max-width:1200px;margin:0 auto;padding-left:var(--pad);padding-right:var(--pad)}
+  .sec-title{font-family:var(--huge);font-weight:400;font-size:clamp(30px,3.4vw,46px);line-height:1;letter-spacing:.01em;color:var(--lime)}
+  .sec-desc{margin-top:14px;max-width:520px;font-family:var(--display);font-size:15px;line-height:1.5;color:var(--muted)}
+
+  /* 顶部导航 */
+  header{position:fixed;top:0;left:0;right:0;z-index:100;display:flex;align-items:center;justify-content:space-between;padding:16px var(--pad);background:rgba(5,5,6,.82);backdrop-filter:blur(10px);border-bottom:1px solid var(--line)}
+  .logo{display:flex;align-items:center}
+  .logo img{height:26px;width:auto;display:block}
+  nav.main{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);display:flex;gap:30px;font-family:var(--mono);font-size:12px;letter-spacing:.12em}
+  nav.main a{color:var(--ink);opacity:.78;transition:.25s}
+  nav.main a:hover,nav.main a.active{opacity:1;color:var(--lime)}
+  .nav-right{display:flex;align-items:center;gap:18px}
+  .nav-login{font-family:var(--mono);font-size:12px;letter-spacing:.1em;opacity:.85}
+  .nav-cta{background:var(--lime);color:#0a0a0a;font-family:var(--mono);font-weight:700;font-size:11px;letter-spacing:.08em;padding:9px 16px;border-radius:999px;border:none}
+  @media(max-width:900px){nav.main{display:none}}
+
+  /* Hero */
+  .hero{min-height:100vh;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:120px var(--pad) 80px;position:relative;overflow:hidden}
+  .hero::before{content:'';position:absolute;left:50%;top:26%;transform:translateX(-50%);width:min(900px,90vw);height:520px;background:radial-gradient(ellipse at center,rgba(198,242,78,.10),transparent 62%);pointer-events:none;z-index:1}
+  .hero-bg{position:absolute;inset:0;width:100%;height:100%;z-index:0;pointer-events:none}
+  /* ImageTrail 鼠标拖尾图片 */
+  .img-trail{position:absolute;inset:0;z-index:1;pointer-events:none;overflow:hidden}
+  .trail-img{width:180px;aspect-ratio:1.1;border-radius:14px;position:absolute;top:0;left:0;opacity:0;overflow:hidden;will-change:transform,opacity;pointer-events:none}
+  .trail-img-inner{background-position:50% 50%;background-size:cover;width:calc(100% + 20px);height:calc(100% + 20px);position:absolute;top:-10px;left:-10px}
+  /* Hero 星形装饰：logo 左右各 3 个相同大小的星形，水平排列、依次上下错位，左右镜像对称 */
+  .hero-stars{position:absolute;top:50%;width:clamp(220px,28vw,400px);height:clamp(280px,34vw,460px);pointer-events:none;z-index:1}
+  .hero-stars.hs-left{right:calc(50% + clamp(120px,15vw,200px));transform:translateY(-50%)}
+  .hero-stars.hs-right{left:calc(50% + clamp(120px,15vw,200px));transform:translateY(-50%)}
+  .hero-stars .star{position:absolute;width:clamp(64px,7vw,92px);height:auto;display:block}
+  .hero-stars.hs-right .star{transform:scaleX(-1)}
+  /* 三个星形垂直排列，水平方向依次错位（阶梯状） */
+  .hero-stars .star:nth-child(1){left:0;top:0}
+  .hero-stars .star:nth-child(2){left:clamp(20px,3vw,48px);top:clamp(60px,7vw,96px)}
+  .hero-stars .star:nth-child(3){left:clamp(40px,6vw,96px);top:clamp(120px,14vw,192px)}
+  @keyframes starFloat{0%,100%{transform:translateY(0) rotate(var(--r,0deg))}50%{transform:translateY(-16px) rotate(var(--r,0deg))}}
+  .hero-logo{width:min(460px,80vw);max-width:480px;height:auto;filter:drop-shadow(0 8px 40px rgba(0,0,0,.6));position:relative;z-index:2}
+  .hero h1{margin-top:20px;font-family:var(--huge);font-weight:400;font-size:clamp(32px,5vw,60px);letter-spacing:.01em;position:relative;z-index:2}
+  .hero p{margin-top:18px;max-width:620px;font-family:var(--display);font-size:clamp(14px,1.4vw,17px);line-height:1.55;color:var(--muted);position:relative;z-index:2}
+  .hero-btns{margin-top:34px;display:flex;gap:16px;flex-wrap:wrap;justify-content:center;position:relative;z-index:2}
+  .btn{font-family:var(--mono);font-weight:700;font-size:13px;letter-spacing:.05em;padding:15px 28px;min-width:190px;text-align:center;border-radius:999px;border:1px solid transparent;transition:transform .2s,box-shadow .3s,background .3s}
+  .btn-lime{background:var(--lime);color:#0a0a0a}
+  .btn-lime:hover{transform:translateY(-3px);box-shadow:0 12px 32px rgba(198,242,78,.34)}
+  .btn-ghost{background:transparent;color:var(--ink);border-color:rgba(255,255,255,.28)}
+  .btn-ghost:hover{border-color:var(--lime);color:var(--lime)}
+  .hero-dots{margin-top:40px;display:flex;gap:9px;position:relative;z-index:2}
+  .hero-dots i{width:7px;height:7px;border-radius:50%;background:rgba(255,255,255,.25);transition:.3s}
+  .hero-dots i.on{background:var(--lime);width:20px;border-radius:4px}
+
+  /* 通用 section 间距 */
+  .block{padding:90px 0}
+  .block-head{margin-bottom:44px}
+
+  /* Workflow Canvas（参考 grid 版：点阵铺满、标题左对齐、节点随滚动逐个出现） */
+  .wf-sec{position:relative;min-height:100vh;background:#101113;color:var(--ink);overflow:hidden}
+  .wf-sec::before{content:'';position:absolute;inset:0;background-image:radial-gradient(rgba(255,255,255,.11) 1px,transparent 1px);background-size:18px 18px;opacity:.34;pointer-events:none}
+  .wf-copy{position:absolute;left:5vw;top:8vh;z-index:4;display:flex;align-items:flex-start;gap:30px}
+  .wf-copy h2{font-family:var(--huge);font-size:clamp(40px,4.2vw,64px);line-height:.9;font-weight:400;letter-spacing:.01em;color:var(--lime);white-space:nowrap;flex:none}
+  .wf-copy p{margin-top:10px;max-width:680px;font-family:var(--display);font-size:clamp(13px,1.1vw,17px);line-height:1.3;color:#f4f4f2;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .wf-viewport{position:absolute;left:1.6vw;right:0;top:24vh;height:64vh;z-index:3;overflow:hidden}
+  .wf-canvas{position:absolute;left:80px;top:0;width:2260px;height:100%;will-change:transform}
+  .wf-node{position:absolute;width:210px;opacity:0;transform:translateX(-50px)}
+  .wf-node.wide{width:320px}
+  .wf-tag{font-family:var(--mono);font-size:10px;color:#d8d8d8;margin:0 0 8px 4px;display:flex;align-items:center;gap:6px}
+  .wf-card{height:132px;border-radius:5px;background:#242424;border:1px solid rgba(255,255,255,.04);box-shadow:0 20px 50px rgba(0,0,0,.25);position:relative;color:#8d8d8d;padding:14px;font-family:var(--display);font-size:12px}
+  .wf-card .center-icon{position:absolute;inset:0;display:grid;place-items:center;color:#e7e7e7;font-size:36px;opacity:.95}
+  .wf-card .center-icon.play::before{content:'';width:0;height:0;border-top:18px solid transparent;border-bottom:18px solid transparent;border-left:31px solid #e7e7e7;display:block}
+  .wf-chip{height:22px;border-radius:5px;background:#2b2b2b;margin-top:8px;color:#d8d8d8;font-family:var(--mono);font-size:9px;display:flex;align-items:center;padding:0 9px;gap:6px;white-space:nowrap}
+  .wf-chip::before{content:'';width:12px;height:12px;border-radius:50%;background:#474747;display:inline-block;flex:none}
+  .wf-line{position:absolute;height:2px;background:#777;opacity:0;transform-origin:left center;z-index:-1}
+  .wf-line span{position:absolute;left:50%;top:-18px;transform:translateX(-50%);font-family:var(--mono);font-size:10px;color:#dedede;background:#101113;padding:0 5px}
+  /* 节点位置：两行交错 7 个（下行 top:284） */
+  .wf-n1{left:0;top:0}.wf-n2{left:285px;top:284px}.wf-n3{left:570px;top:0}.wf-n4{left:860px;top:284px}.wf-n5{left:1180px;top:0}.wf-n6{left:1530px;top:284px}.wf-n7{left:1880px;top:0}
+  /* 连线：发出=右边中点(y=93/377)；接收=下行上边中点(y=284) / 上行底边中点(y=186) */
+  .wf-l1{left:210px;top:93px;width:269px;transform:rotate(50deg)}
+  .wf-l2{left:495px;top:377px;width:313px;transform:rotate(-41deg)}
+  .wf-l3{left:780px;top:93px;width:273px;transform:rotate(49deg)}
+  .wf-l4{left:1070px;top:377px;width:369px;transform:rotate(-34deg)}
+  .wf-l5{left:1500px;top:93px;width:251px;transform:rotate(55deg)}
+  .wf-l6{left:1740px;top:377px;width:390px;transform:rotate(-32deg)}
+
+  /* Agent（参考 grid 版：Three.js 玻璃小球 + 眼睛跟随 + 聊天气泡随滚动逐条显示） */
+  .agent-sec{position:relative;min-height:100vh;background:#050607;color:var(--ink);overflow:hidden;display:grid;place-items:center}
+  .agent-sec::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 50% 46%,rgba(120,150,255,.08),transparent 40%);opacity:.85;pointer-events:none}
+  .agent-copy{position:absolute;left:50%;top:50%;transform:translate(calc(-50% - 480px),-50%);z-index:3;width:min(400px,30vw)}
+  .agent-copy h2{font-family:var(--huge);font-size:clamp(40px,4.2vw,64px);line-height:.86;font-weight:400;color:var(--lime)}
+  .agent-copy p{margin-top:22px;font-family:var(--display);font-size:clamp(13px,1.1vw,17px);line-height:1.3;color:#f4f4f2}
+  .orb-stage{--eye-x:0px;--eye-y:0px;position:relative;z-index:2;width:480px;height:480px;display:grid;place-items:center}
+  .orb-stage::before{content:'';position:absolute;width:380px;height:380px;border-radius:50%;background:radial-gradient(circle,rgba(190,232,255,.46),rgba(255,255,255,.2) 34%,transparent 58%);filter:blur(28px);opacity:.58;animation:gasBreath 3.4s ease-in-out infinite;transform-origin:center center}
+  /* 外发光波纹：从小球向外脉冲扩散 */
+  .orb-stage::after{content:'';position:absolute;width:300px;height:300px;border-radius:50%;border:2px solid rgba(198,242,78,.4);opacity:0;animation:orbPulse 2.8s ease-out infinite;pointer-events:none}
+  .orb-stage .ripple2{position:absolute;width:300px;height:300px;border-radius:50%;border:2px solid rgba(190,232,255,.35);opacity:0;animation:orbPulse 2.8s ease-out 1.4s infinite;pointer-events:none}
+  @keyframes orbPulse{0%{transform:scale(1);opacity:.6}70%{opacity:.12}100%{transform:scale(1.8);opacity:0}}
+  .orb-canvas{position:absolute;width:360px;height:360px;display:block;filter:drop-shadow(0 0 26px rgba(255,255,255,.42)) drop-shadow(0 0 44px rgba(255,255,255,.14));z-index:1}
+  .orb-eyes{position:absolute;left:50%;top:50%;z-index:3;display:flex;gap:36px;transform:translate(-50%,-50%) translate(var(--eye-x),var(--eye-y));transition:transform .08s linear}
+  .orb-eyes .eye{width:28px;height:62px;border-radius:16px;background:#fff;box-shadow:0 0 16px rgba(255,255,255,.85);transform-origin:center center;transition:transform .09s ease,opacity .09s ease}
+  .orb-eyes.blink .eye{transform:scaleY(.06);opacity:.92}
+  .orb-shadow{position:absolute;bottom:72px;width:220px;height:32px;border-radius:50%;background:rgba(0,0,0,.58);filter:blur(10px);opacity:.42;z-index:0}
+  /* 右侧聊天气泡 */
+  .agent-chat{position:absolute;left:50%;top:50%;transform:translate(calc(-50% + 550px),-50%);z-index:4;width:min(400px,30vw);height:320px}
+  .chat-bubble{position:absolute;left:0;top:50%;background:#fff;color:#0a0a0f;font-family:var(--display);font-weight:600;font-size:clamp(14px,1.2vw,18px);letter-spacing:.02em;padding:13px 22px;border-radius:30px;box-shadow:0 16px 36px rgba(0,0,0,.4);opacity:0;white-space:nowrap;will-change:transform,opacity}
+  .chat-bubble::after{content:'';position:absolute;left:26px;bottom:-8px;width:18px;height:18px;background:#fff;border-radius:0 0 0 5px;transform:rotate(45deg)}
+  @keyframes gasBreath{0%,100%{transform:scale(.9);opacity:.42}50%{transform:scale(1.08);opacity:.76}}
+
+  /* Game Asset Generation → Enterprise Ledger（合并单屏叙事） */
+  .gen-sec{position:relative;height:900px;background:#101113;overflow:hidden}
+  .gen-head{position:absolute;left:var(--pad);top:96px;z-index:4;display:flex;flex-direction:column;align-items:flex-start}
+  .gen-head2{opacity:0}
+  .gen-head h2{font-family:var(--huge);font-size:clamp(40px,4.2vw,64px);line-height:.9;font-weight:400;letter-spacing:.01em;color:var(--lime)}
+  .gen-head p{margin-top:14px;max-width:620px;font-family:var(--display);font-size:clamp(13px,1.1vw,17px);line-height:1.3;color:#f4f4f2}
+  .gen-flow{position:absolute;left:0;right:0;top:38%;transform:translateY(-50%);display:flex;align-items:center;justify-content:flex-start;gap:0;padding-left:var(--pad);max-width:100%;overflow:visible;z-index:3}
+  .gen-card{width:480px;height:360px;position:relative;cursor:pointer;transition:transform .5s cubic-bezier(.22,1,.36,1),box-shadow .4s,margin-left .5s cubic-bezier(.22,1,.36,1);flex:none;margin-left:-180px;perspective:1000px;background:transparent}
+  .gen-card:first-child{margin-left:0}
+  .gen-card .gen-img{width:100%;height:100%;background-size:contain;background-repeat:no-repeat;background-position:center;position:absolute;inset:0;transition:filter .4s,transform .5s cubic-bezier(.22,1,.36,1);transform:rotateY(55deg) scale(.88);transform-origin:left center}
+  .gen-card .gen-label{position:absolute;bottom:14px;left:18px;font-family:var(--huge);font-size:22px;color:#fff;z-index:2;text-shadow:0 2px 8px rgba(0,0,0,.8)}
+  .gen-card.active .gen-img,.gen-card:hover .gen-img{transform:rotateY(0deg) scale(1)}
+  .gen-card.active,.gen-card:hover{z-index:10}
+  /* V1/V2/V3 版本演进展示（叙事后段） */
+  .gen-ledger{position:absolute;left:0;right:0;top:52%;transform:translateY(-50%);display:flex;align-items:center;justify-content:flex-start;padding-left:var(--pad);gap:80px;z-index:5;pointer-events:none}
+  .gl-slot{position:relative;width:346px;height:260px;flex:none}
+  .gl-label{position:absolute;left:50%;bottom:-84px;transform:translateX(-50%);font-family:var(--huge);font-size:34px;color:var(--lime);opacity:0;white-space:nowrap;z-index:20}
+  .gl-imgstack .gl-label{opacity:1}
+  .gl-arrow2{font-size:30px;color:var(--muted);opacity:0;flex:none}
+  /* V2/V3 图片堆：6 张图斜向堆叠，视觉与 V1.0 收拢态一致 */
+  .gl-imgstack{position:relative;width:346px;height:260px;flex:none;opacity:0}
+  .gl-imgstack .gis{position:absolute;inset:0;background-size:contain;background-repeat:no-repeat;background-position:center}
+  .gl-imgstack .gis:nth-child(1){transform:translate(0,0);z-index:1}
+  .gl-imgstack .gis:nth-child(2){transform:translate(6px,6px);z-index:2}
+  .gl-imgstack .gis:nth-child(3){transform:translate(12px,12px);z-index:3}
+  .gl-imgstack .gis:nth-child(4){transform:translate(18px,18px);z-index:4}
+  .gl-imgstack .gis:nth-child(5){transform:translate(24px,24px);z-index:5}
+  .gl-imgstack .gis:nth-child(6){transform:translate(30px,30px);z-index:6}
+
+  /* Security（三栏布局：左标题 / 中保险箱 / 右要点；标题描述样式同 Agent） */
+  .sec-sec{position:relative;min-height:100vh;background:#050607;color:var(--ink);overflow:hidden;display:flex;align-items:center;justify-content:space-between;gap:clamp(24px,4vw,80px);padding:0 var(--pad)}
+  .sec-sec::before{content:'';position:absolute;inset:0;background:radial-gradient(circle at 50% 46%,rgba(198,242,78,.08),transparent 40%);opacity:.85;pointer-events:none}
+  .sec-copy{position:relative;z-index:3;flex:none;width:min(340px,26vw)}
+  .sec-copy h2{font-family:var(--huge);font-size:clamp(40px,4.2vw,64px);line-height:.86;font-weight:400;color:var(--lime)}
+  .sec-copy p{margin-top:22px;font-family:var(--display);font-size:clamp(13px,1.1vw,17px);line-height:1.3;color:#f4f4f2}
+  .safe-stage{position:relative;z-index:2;flex:1 1 auto;max-width:480px;height:420px;display:grid;place-items:center;overflow:visible}
+  .safe-stage::before{content:'';position:absolute;width:74%;height:74%;border-radius:50%;background:radial-gradient(circle,rgba(198,242,78,.14),transparent 62%);filter:blur(42px);opacity:.6;pointer-events:none}
+  .safe-img{position:relative;z-index:3;width:120px;height:auto;display:block;filter:drop-shadow(0 20px 44px rgba(0,0,0,.6));transform-origin:center center}
+  /* 四周卫星保险箱（初始隐藏在中心，随滚动扩散） */
+  .s-sat{position:absolute;left:50%;top:50%;width:120px;height:auto;z-index:2;filter:drop-shadow(0 14px 30px rgba(0,0,0,.55));opacity:0;will-change:transform,opacity}
+  /* 断开的连线：灰色虚线 + 中点红色 ✕ */
+  .safe-links{position:absolute;left:50%;top:50%;width:0;height:0;z-index:1;pointer-events:none}
+  .s-link{position:absolute;left:0;top:0;opacity:0}
+  .s-v{width:0;height:66px;border-left:2px dashed rgba(255,255,255,.28);margin-left:-1px}
+  .s-h{height:0;width:56px;border-top:2px dashed rgba(255,255,255,.28);margin-top:-1px}
+  .s-up{transform:translateY(-120px)}
+  .s-down{transform:translateY(54px)}
+  .s-left{transform:translateX(-116px)}
+  .s-right{transform:translateX(60px)}
+  .s-x{position:absolute;left:0;top:0;color:#e5484d;font-family:var(--display);font-size:15px;font-weight:700;transform:translate(-50%,-50%);opacity:0;z-index:4}
+  .sx-up{margin-top:-87px}
+  .sx-down{margin-top:87px}
+  .sx-left{margin-left:-88px}
+  .sx-right{margin-left:88px}
+  .sec-points{position:relative;z-index:4;flex:none;width:min(340px,26vw);display:flex;flex-direction:column;gap:34px}
+  .sec-points .pt{display:flex;gap:14px;align-items:flex-start;font-family:var(--display);font-weight:600;font-size:clamp(14px,1.2vw,18px);line-height:1.3;color:#f4f4f2}
+  .sec-points .pt .pt-ic{flex:none;width:20px;height:23px;color:#e8e8ea;margin-top:1px}
+
+  /* 三栏特性：远景 + 三个字母模块 */
+  .star-bg{position:absolute;z-index:0;inset:0;width:100%;height:100%;pointer-events:none}
+  #api{background:#16161a;padding:90px 0 110px;position:relative}
+  #api::before{content:'';position:absolute;z-index:1;inset:0;background-image:radial-gradient(circle at 50% 20%,rgba(198,242,78,.14),transparent 52%);pointer-events:none}
+  #api::after{content:'';position:absolute;z-index:0;inset:0;background-image:radial-gradient(rgba(255,255,255,.09) 1px,transparent 1px);background-size:22px 22px;opacity:.5;pointer-events:none}
+  .api-vision{position:relative;z-index:2;text-align:center;font-family:var(--huge);font-weight:400;font-size:clamp(22px,2.6vw,36px);line-height:1.15;letter-spacing:.01em;color:#e8e8ea;margin-bottom:150px;padding:0 var(--pad)}
+  .feat-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:150px}
+  .feat{position:relative;padding:8px 0 8px 0;min-height:260px}
+  .feat .feat-bg{position:absolute;left:-12px;top:-46px;font-family:var(--huge);font-weight:400;font-size:220px;line-height:1;color:var(--lime);pointer-events:none;user-select:none;letter-spacing:-.02em}
+  .feat h3{position:relative;z-index:2;margin:0 0 14px 84px;font-family:var(--huge);font-weight:400;font-size:clamp(26px,2.2vw,34px);line-height:1.05;letter-spacing:.01em;color:#f4f4f2}
+  .feat p{position:relative;z-index:2;margin:0 0 0 84px;max-width:340px;font-size:14px;line-height:1.55;color:var(--muted)}
+  @media(max-width:820px){.feat-grid{grid-template-columns:1fr}}
+
+  /* Mission bar */
+  .mission{margin:20px 0;padding:34px var(--pad);border-top:1px solid var(--line);border-bottom:1px solid var(--line);text-align:center;font-family:var(--huge);font-weight:400;font-size:clamp(18px,2.4vw,30px);letter-spacing:.01em;color:#dcdcdc}
+
+  /* CTA + 页脚共享容器 */
+  .cta-footer{position:relative;background:#050506}
+  /* 底部 CTA */
+  .cta-band{position:relative;z-index:1;padding:96px var(--pad);text-align:center}
+  .cta-band h2{font-family:var(--huge);font-weight:400;font-size:clamp(26px,3.6vw,48px);line-height:1.5;letter-spacing:.01em}
+  .cta-band .hero-btns{justify-content:center;margin-top:32px}
+
+  /* 页尾 */
+  .site-footer{position:relative;z-index:1;padding:70px var(--pad) 36px;background:#050506}
+  .footer-cols{display:flex;justify-content:space-between;align-items:flex-start;gap:60px;flex-wrap:wrap}
+  .footer-brand .flogo img{height:150px;width:auto;display:block}
+  .footer-links{display:grid;grid-template-columns:repeat(4,auto);gap:clamp(40px,6vw,90px)}
+  .footer-col h4{font-family:var(--mono);font-size:11px;letter-spacing:.16em;color:var(--muted);margin-bottom:16px}
+  .footer-col a{display:block;font-size:14px;color:var(--ink);opacity:.8;padding:6px 0;transition:.22s}
+  .footer-col a:hover{opacity:1;color:var(--lime);transform:translateX(4px)}
+  .footer-bottom{margin-top:44px;padding-top:28px;border-top:1px solid var(--line);display:flex;justify-content:space-between;flex-wrap:wrap;gap:14px;font-family:var(--mono);font-size:11px;letter-spacing:.06em;color:var(--muted)}
+  .footer-bottom .legal{display:flex;gap:22px;flex-wrap:wrap}
+  .footer-bottom .legal a:hover{color:var(--lime)}
+  @media(max-width:820px){.footer-links{grid-template-columns:1fr 1fr;gap:32px}.agent-grid,.sec-grid{grid-template-columns:1fr;gap:28px}.gen-row{flex-wrap:wrap}}
+
+  /* 进场动画 */
+  .reveal{opacity:0;transform:translateY(30px);transition:opacity .7s ease,transform .7s ease}
+  .reveal.in{opacity:1;transform:none}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="logo"><img src="assets/logos/lap-logo-white.png" alt="LAP"></div>
+  <nav class="main">
+    <a href="#home" class="active">Home</a>
+    <a href="#workflow">Canvas</a>
+    <a href="#agent">Agent</a>
+    <a href="#generation">Assets</a>
+    <a href="#security">Security</a>
+    <a href="#api">API</a>
+  </nav>
+  <div class="nav-right">
+    <a class="nav-login" href="#">Log in</a>
+    <button class="nav-cta">GET STARTED</button>
+  </div>
+</header>
+
+<!-- ① Hero -->
+<section class="hero" id="home">
+  <canvas class="hero-bg" id="heroBg" aria-hidden="true"></canvas>
+  <div class="img-trail" id="imgTrail" aria-hidden="true"></div>
+  <img class="hero-logo" src="assets/logos/lap-logo-white.png" alt="LAP">
+  <h1>Game Asset Agent</h1>
+  <p>An AI-native platform for modern game development. Powering asset production with industrialized pipelines for a comprehensive upgrade in efficiency, quality, and security.</p>
+  <div class="hero-btns">
+    <button class="btn btn-lime">Request a Demo</button>
+    <button class="btn btn-ghost">Community</button>
+  </div>
+  <div class="hero-dots"><i class="on"></i><i></i><i></i></div>
+</section>
+
+<!-- ② Workflow Canvas -->
+<section class="wf-sec" id="workflow">
+  <div class="wf-copy">
+    <h2>Workflow Canvas</h2>
+    <p>An intuitive node-based orchestration interface that supports flexible configuration and extension of asset pipelines, making complex processes clear at a glance.</p>
+  </div>
+  <div class="wf-viewport">
+    <div class="wf-canvas">
+      <div class="wf-line wf-l1"><span>Image</span></div>
+      <div class="wf-line wf-l2"><span>Text</span></div>
+      <div class="wf-line wf-l3"><span>Image</span></div>
+      <div class="wf-line wf-l4"><span>Video</span></div>
+      <div class="wf-line wf-l5"><span>Feedback</span></div>
+      <div class="wf-line wf-l6"><span>Video</span></div>
+      <div class="wf-node wf-n1">
+        <div class="wf-tag">▣ Image Gen</div>
+        <div class="wf-card"><div class="center-icon">▧</div></div>
+        <div class="wf-chip">Midjourney V8.1  2K · 1:1 · 1</div>
+      </div>
+      <div class="wf-node wf-n2">
+        <div class="wf-tag">☰ Text</div>
+        <div class="wf-card">Double-click to edit...</div>
+        <div class="wf-chip">Gemini 3.5 Flash</div>
+      </div>
+      <div class="wf-node wf-n3">
+        <div class="wf-tag">▣ Image Gen</div>
+        <div class="wf-card"><div class="center-icon">▧</div></div>
+        <div class="wf-chip">Midjourney V8.1  2K · 1:1 · 1</div>
+      </div>
+      <div class="wf-node wf-n4">
+        <div class="wf-tag">▣ Image Gen</div>
+        <div class="wf-card"><div class="center-icon">▧</div></div>
+        <div class="wf-chip">Midjourney V8.1  2K · 1:1 · 1</div>
+      </div>
+      <div class="wf-node wf-n5 wide">
+        <div class="wf-tag">▣ Video Gen</div>
+        <div class="wf-card"><div class="center-icon play"></div></div>
+        <div class="wf-chip">Seedance2.0Mini  720p · Auto</div>
+      </div>
+      <div class="wf-node wf-n6 wide">
+        <div class="wf-tag">▣ Video Gen</div>
+        <div class="wf-card"><div class="center-icon play"></div></div>
+        <div class="wf-chip">Seedance2.0Mini  720p · Auto</div>
+      </div>
+      <div class="wf-node wf-n7 wide">
+        <div class="wf-tag">▣ Video Gen</div>
+        <div class="wf-card"><div class="center-icon play"></div></div>
+        <div class="wf-chip">Seedance2.0Mini  1080p · Final Output</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<!-- ③ Agent -->
+<section class="agent-sec" id="agent">
+  <div class="agent-copy">
+    <h2>Agent</h2>
+    <p>Unified management of models, materials, and version information. Asset lineage is clear and traceable, enabling asset accumulation and refined operations.</p>
+  </div>
+  <div class="orb-stage" id="orbStage">
+    <div class="ripple2" aria-hidden="true"></div>
+    <div class="orb-shadow" aria-hidden="true"></div>
+    <canvas class="orb-canvas" id="orbCanvas" aria-hidden="true"></canvas>
+    <div class="orb-eyes" id="orbEyes" aria-hidden="true">
+      <div class="eye"></div>
+      <div class="eye"></div>
+    </div>
+  </div>
+  <div class="agent-chat" id="agentChat">
+    <div class="chat-bubble">HELLO!</div>
+    <div class="chat-bubble">WHAT CAN I HELP YOU?</div>
+    <div class="chat-bubble">GENERATE A GAME CHARACTER</div>
+    <div class="chat-bubble">ON IT — RENDERING NOW</div>
+    <div class="chat-bubble">NEED A 3D MODEL TOO?</div>
+    <div class="chat-bubble">IM ON MY WAY!</div>
+  </div>
+</section>
+
+<!-- ④ Game Asset Generation → Enterprise Ledger（合并为单屏滚动叙事） -->
+<section class="gen-sec" id="generation">
+  <!-- 标题：两套叠加，随滚动切换 -->
+  <div class="gen-head" id="genHead">
+    <h2>Game Asset Generation</h2>
+    <p>The comprehensive one-stop model asset generation pipeline on the platform.</p>
+  </div>
+  <div class="gen-head gen-head2" id="ledgerHead">
+    <h2>Enterprise Asset Library &amp; Ledger</h2>
+    <p>Unified management of models, materials, and version information. Asset lineage is clear and traceable, enabling asset accumulation and refined operations.</p>
+  </div>
+
+  <!-- 6 张图 Cover Flow -->
+  <div class="gen-flow reveal" id="genFlow">
+    <div class="gen-card" data-idx="0"><div class="gen-img" style="background-image:url(assets/gen/Game_2D_character_concept_art__2026-07-17T02-50-49.png)"></div><div class="gen-label">2D Art</div></div>
+    <div class="gen-card" data-idx="1"><div class="gen-img" style="background-image:url(assets/gen/3D_game_character_model_render_2026-07-17T02-51-15.png)"></div><div class="gen-label">3D Model</div></div>
+    <div class="gen-card" data-idx="2"><div class="gen-img" style="background-image:url(assets/gen/3D_character_rigging_visualiza_2026-07-17T02-51-37.png)"></div><div class="gen-label">Rig</div></div>
+    <div class="gen-card" data-idx="3"><div class="gen-img" style="background-image:url(assets/gen/Game_character_animation_seque_2026-07-17T02-51-59.png)"></div><div class="gen-label">Animation</div></div>
+    <div class="gen-card" data-idx="4"><div class="gen-img" style="background-image:url(assets/gen/Game_scene_environment_concept_2026-07-17T02-52-20.png)"></div><div class="gen-label">Scene</div></div>
+    <div class="gen-card" data-idx="5"><div class="gen-img" style="background-image:url(assets/gen/Game_UI_interface_design__fant_2026-07-17T02-52-42.png)"></div><div class="gen-label">UI</div></div>
+  </div>
+
+  <!-- V1.0(图片堆停靠位) → V2.0 → V3.0 版本演进（叙事后段显示） -->
+  <div class="gen-ledger" id="genLedger" aria-hidden="true">
+    <div class="gl-slot" id="glV1"><span class="gl-label" id="glV1Label">V1.0</span></div>
+    <div class="gl-arrow2 gl-a" id="glA1">➜</div>
+    <div class="gl-imgstack" id="glV2">
+      <div class="gis" style="background-image:url(assets/gen/Game_2D_character_concept_art__2026-07-17T02-50-49.png)"></div>
+      <div class="gis" style="background-image:url(assets/gen/3D_game_character_model_render_2026-07-17T02-51-15.png)"></div>
+      <div class="gis" style="background-image:url(assets/gen/3D_character_rigging_visualiza_2026-07-17T02-51-37.png)"></div>
+      <div class="gis" style="background-image:url(assets/gen/Game_character_animation_seque_2026-07-17T02-51-59.png)"></div>
+      <div class="gis" style="background-image:url(assets/gen/Game_scene_environment_concept_2026-07-17T02-52-20.png)"></div>
+      <div class="gis" style="background-image:url(assets/gen/Game_UI_interface_design__fant_2026-07-17T02-52-42.png)"></div>
+      <span class="gl-label">V2.0</span>
+    </div>
+    <div class="gl-arrow2 gl-a" id="glA2">➜</div>
+    <div class="gl-imgstack" id="glV3">
+      <div class="gis" style="background-image:url(assets/gen/Game_2D_character_concept_art__2026-07-17T02-50-49.png)"></div>
+      <div class="gis" style="background-image:url(assets/gen/3D_game_character_model_render_2026-07-17T02-51-15.png)"></div>
+      <div class="gis" style="background-image:url(assets/gen/3D_character_rigging_visualiza_2026-07-17T02-51-37.png)"></div>
+      <div class="gis" style="background-image:url(assets/gen/Game_character_animation_seque_2026-07-17T02-51-59.png)"></div>
+      <div class="gis" style="background-image:url(assets/gen/Game_scene_environment_concept_2026-07-17T02-52-20.png)"></div>
+      <div class="gis" style="background-image:url(assets/gen/Game_UI_interface_design__fant_2026-07-17T02-52-42.png)"></div>
+      <span class="gl-label">V3.0</span>
+    </div>
+  </div>
+</section>
+
+<!-- ⑥ Security（全屏沉浸式，参考 Agent） -->
+<section class="sec-sec" id="security">
+  <div class="sec-copy reveal">
+    <h2>Security</h2>
+    <p>Strict business assurance around absolute security of enterprise assets.</p>
+  </div>
+  <div class="safe-stage" id="safeStage">
+    <!-- 断开的连线（十字，中点红色 ✕） -->
+    <div class="safe-links" aria-hidden="true">
+      <div class="s-link s-v s-up"></div>
+      <div class="s-link s-v s-down"></div>
+      <div class="s-link s-h s-left"></div>
+      <div class="s-link s-h s-right"></div>
+      <span class="s-x sx-up">✕</span>
+      <span class="s-x sx-down">✕</span>
+      <span class="s-x sx-left">✕</span>
+      <span class="s-x sx-right">✕</span>
+    </div>
+    <!-- 四周卫星保险箱 -->
+    <img class="s-sat s-sup" src="assets/safe.png" aria-hidden="true" alt="" />
+    <img class="s-sat s-sdown" src="assets/safe.png" aria-hidden="true" alt="" />
+    <img class="s-sat s-sleft" src="assets/safe.png" aria-hidden="true" alt="" />
+    <img class="s-sat s-sright" src="assets/safe.png" aria-hidden="true" alt="" />
+    <!-- 中心保险箱 -->
+    <img class="safe-img" id="safeCenter" src="assets/safe.png" alt="Enterprise Safe" />
+  </div>
+  <div class="sec-points" id="secPoints">
+    <div class="pt"><svg class="pt-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M12 2.5l7.5 2.8v5.7c0 4.7-3.2 8-7.5 10.5C7.7 19 4.5 15.7 4.5 11V5.3L12 2.5z"/></svg><span>Absolute Data Isolation</span></div>
+    <div class="pt"><svg class="pt-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M12 2.5l7.5 2.8v5.7c0 4.7-3.2 8-7.5 10.5C7.7 19 4.5 15.7 4.5 11V5.3L12 2.5z"/></svg><span>Zero Content Competition</span></div>
+    <div class="pt"><svg class="pt-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M12 2.5l7.5 2.8v5.7c0 4.7-3.2 8-7.5 10.5C7.7 19 4.5 15.7 4.5 11V5.3L12 2.5z"/></svg><span>Rigorous Compliance &amp; Access Control</span></div>
+  </div>
+</section>
+
+<!-- ⑦ 三栏特性：远景一句话 + 三个字母模块 -->
+<section class="block" id="api">
+  <h2 class="api-vision reveal">Our Mission &amp; Vision — industrializing creative asset production.</h2>
+  <div class="wrap">
+    <div class="feat-grid">
+      <div class="feat reveal">
+        <span class="feat-bg" aria-hidden="true">L</span>
+        <h3>Lightspeed</h3>
+        <p>Backed by the strong brand momentum of LightSpeed Studios, providing a solid technical foundation and a global perspective.</p>
+      </div>
+      <div class="feat reveal">
+        <span class="feat-bg" aria-hidden="true">A</span>
+        <h3>Asset &amp; AI &amp; Art</h3>
+        <p>Pursuing the ultimate in artistic expression, accumulating high-value digital assets and enabling efficient asset reuse and management.</p>
+      </div>
+      <div class="feat reveal">
+        <span class="feat-bg" aria-hidden="true">P</span>
+        <h3>Platform &amp; Partner &amp; Pipeline</h3>
+        <p>A robust and reliable underlying PaaS platform that builds industrialized, high-efficiency production pipelines and ensures system stability under high concurrency.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+
+
+<!-- ⑨⑩ CTA + 页尾（共享星空背景） -->
+<div class="cta-footer">
+  <canvas class="star-bg" aria-hidden="true"></canvas>
+  <section class="cta-band">
+    <div class="wrap">
+      <h2 class="reveal">Ready to begin your journey to<br>industrialized asset production?</h2>
+      <div class="hero-btns reveal">
+        <button class="btn btn-lime">Request a Demo</button>
+        <button class="btn btn-ghost">Community</button>
+      </div>
+    </div>
+  </section>
+  <footer class="site-footer">
+  <div class="footer-cols">
+    <div class="footer-brand">
+      <div class="flogo"><img src="assets/logos/lap-logo-white.png" alt="LAP"></div>
+    </div>
+    <div class="footer-links">
+      <div class="footer-col">
+        <h4>FEATURES</h4>
+        <a href="#">Image Generation</a>
+        <a href="#">Asset Ledger</a>
+        <a href="#">Workflow Canvas</a>
+        <a href="#">Security</a>
+      </div>
+      <div class="footer-col">
+        <h4>USE CASES</h4>
+        <a href="#">2D Art</a>
+        <a href="#">3D Models</a>
+        <a href="#">Animation</a>
+        <a href="#">Game UI</a>
+      </div>
+      <div class="footer-col">
+        <h4>RESOURCES</h4>
+        <a href="#">Documentation</a>
+        <a href="#">API Reference</a>
+        <a href="#">Community</a>
+        <a href="#">Blog</a>
+      </div>
+      <div class="footer-col">
+        <h4>COMPANY</h4>
+        <a href="#">About</a>
+        <a href="#">Careers</a>
+        <a href="#">Contact</a>
+        <a href="#">Privacy</a>
+      </div>
+    </div>
+  </div>
+  <div class="footer-bottom">
+    <span>© 2026 LAP. All rights reserved.</span>
+    <div class="legal">
+      <a href="#">Privacy Policy</a>
+      <a href="#">Terms of Service</a>
+      <a href="#">Cookies</a>
+    </div>
+  </div>
+</footer>
+</div>
+
+
+<script src="libs/gsap.min.js"></script>
+<script src="libs/ScrollTrigger.min.js"></script>
+<script src="libs/three.min.js"></script>
+<script>
+(function(){
+  // Hero 动态背景：星空 + 流星
+  createStarField(document.getElementById('heroBg'));
+
+  // 共享星空背景函数（可复用于多屏）
+  function createStarField(canvas){
+    if(!canvas)return;
+    const ctx=canvas.getContext('2d');
+    const LIME='198,242,78';
+    let cw=0,ch=0,raf=null,visible=true;
+    let stars=[],meteors=[],nextMeteor=0;
+    function resize(){
+      const r=canvas.getBoundingClientRect();
+      cw=r.width;ch=r.height;
+      if(cw<1||ch<1)return;
+      canvas.width=Math.round(cw*devicePixelRatio);
+      canvas.height=Math.round(ch*devicePixelRatio);
+      ctx.setTransform(devicePixelRatio,0,0,devicePixelRatio,0,0);
+      const n=Math.min(120,Math.floor(cw*ch/8000));
+      stars=[];
+      for(let i=0;i<n;i++){
+        stars.push({x:Math.random()*cw,y:Math.random()*ch,r:Math.random()*1.5+.3,vx:(Math.random()-.5)*.08,vy:(Math.random()-.5)*.06,tw:Math.random()*Math.PI*2,sp:.02+Math.random()*.04});
+      }
+      meteors=[];
+      nextMeteor=performance.now()+800+Math.random()*2000;
+    }
+    function spawnMeteor(){
+      const fromTop=Math.random()<.6;
+      const x=fromTop?Math.random()*cw*.7:-40;
+      const y=fromTop?-40:Math.random()*ch*.4;
+      const angle=Math.PI*.22+Math.random()*.16;
+      const speed=6+Math.random()*5;
+      meteors.push({x,y,vx:Math.cos(angle)*speed,vy:Math.sin(angle)*speed,life:1,len:80+Math.random()*60});
+    }
+    function draw(){
+      ctx.clearRect(0,0,cw,ch);
+      for(const st of stars){
+        st.x+=st.vx;st.y+=st.vy;st.tw+=st.sp;
+        if(st.x<0)st.x=cw;if(st.x>cw)st.x=0;if(st.y<0)st.y=ch;if(st.y>ch)st.y=0;
+        const a=.3+Math.sin(st.tw)*.35;
+        ctx.beginPath();ctx.arc(st.x,st.y,st.r,0,Math.PI*2);
+        ctx.fillStyle='rgba(255,255,255,'+a.toFixed(3)+')';ctx.fill();
+        if(st.r>1.2){ctx.beginPath();ctx.arc(st.x,st.y,st.r*2.4,0,Math.PI*2);ctx.fillStyle='rgba('+LIME+','+(a*.12).toFixed(3)+')';ctx.fill();}
+      }
+      const now=performance.now();
+      if(now>=nextMeteor){spawnMeteor();nextMeteor=now+1500+Math.random()*3500;}
+      for(let i=meteors.length-1;i>=0;i--){
+        const m=meteors[i];
+        m.x+=m.vx;m.y+=m.vy;m.life-=.006;
+        if(m.life<=0||m.x>cw+80||m.y>ch+80){meteors.splice(i,1);continue;}
+        const tx=m.x-m.vx*m.len/8,ty=m.y-m.vy*m.len/8;
+        const g=ctx.createLinearGradient(m.x,m.y,tx,ty);
+        g.addColorStop(0,'rgba(255,255,255,'+(m.life*.9).toFixed(3)+')');
+        g.addColorStop(.3,'rgba('+LIME+','+(m.life*.4).toFixed(3)+')');
+        g.addColorStop(1,'rgba(255,255,255,0)');
+        ctx.beginPath();ctx.moveTo(m.x,m.y);ctx.lineTo(tx,ty);
+        ctx.strokeStyle=g;ctx.lineWidth=2;ctx.lineCap='round';ctx.stroke();
+        ctx.beginPath();ctx.arc(m.x,m.y,2,0,Math.PI*2);
+        ctx.fillStyle='rgba(255,255,255,'+m.life.toFixed(3)+')';ctx.fill();
+      }
+      raf=requestAnimationFrame(draw);
+    }
+    function start(){if(!raf){visible=true;resize();draw();}}
+    function stop(){if(raf){cancelAnimationFrame(raf);raf=null;}}
+    resize();start();
+    addEventListener('resize',resize);
+    if('IntersectionObserver' in window){
+      new IntersectionObserver(es=>{es[0].isIntersecting?start():stop();},{threshold:.02}).observe(canvas);
+    }
+  }
+
+  // 给所有带 .star-bg 的屏加星空
+  document.querySelectorAll('.star-bg').forEach(c=>createStarField(c));
+
+  // ImageTrail：鼠标拖尾图片（纯 JS 版，Variant 1）
+  const trailContainer=document.getElementById('imgTrail');
+  if(trailContainer&&window.gsap){
+    const items=[
+      'assets/games/game1.png','assets/games/game2.png','assets/games/game3.png',
+      'assets/games/game4.png','assets/games/game5.png','assets/games/game6.png',
+      'assets/games/game7.png','assets/games/game8.png','assets/games/game9.png',
+      'assets/games/game10.png','assets/games/game11.png','assets/games/game12.png'
+    ];
+    // 生成图片元素
+    const imgs=[];
+    items.forEach(url=>{
+      const el=document.createElement('div');el.className='trail-img';
+      const inner=document.createElement('div');inner.className='trail-img-inner';
+      inner.style.backgroundImage='url('+url+')';el.appendChild(inner);
+      trailContainer.appendChild(el);
+      imgs.push({el,inner,rect:el.getBoundingClientRect()});
+    });
+    const total=imgs.length;let pos=0,zVal=1,active=0,idle=true,threshold=80;
+    let mousePos={x:0,y:0},lastPos={x:0,y:0},cachePos={x:0,y:0},started=false;
+    function lerp(a,b,n){return(1-n)*a+n*b;}
+    function dist(a,b){return Math.hypot(a.x-b.x,a.y-b.y);}
+    const hero=trailContainer.parentElement;
+    hero.addEventListener('mousemove',e=>{
+      const r=trailContainer.getBoundingClientRect();
+      mousePos={x:e.clientX-r.left,y:e.clientY-r.top};
+      if(!started){started=true;cachePos={...mousePos};render();}
+    });
+    hero.addEventListener('touchmove',e=>{
+      if(e.touches.length){const r=trailContainer.getBoundingClientRect();mousePos={x:e.touches[0].clientX-r.left,y:e.touches[0].clientY-r.top};if(!started){started=true;cachePos={...mousePos};render();}}
+    });
+    function render(){
+      const d=dist(mousePos,lastPos);
+      cachePos.x=lerp(cachePos.x,mousePos.x,0.1);
+      cachePos.y=lerp(cachePos.y,mousePos.y,0.1);
+      if(d>threshold){showNext();lastPos={...mousePos};}
+      if(idle&&zVal!==1)zVal=1;
+      requestAnimationFrame(render);
+    }
+    function showNext(){
+      ++zVal;pos=pos<total-1?pos+1:0;
+      const img=imgs[pos];gsap.killTweensOf(img.el);
+      gsap.timeline({onStart:()=>{active++;idle=false;},onComplete:()=>{active--;if(active===0)idle=true;}})
+        .fromTo(img.el,{opacity:1,scale:1,zIndex:zVal,x:cachePos.x-img.rect.width/2,y:cachePos.y-img.rect.height/2},
+          {duration:.4,ease:'power1',x:mousePos.x-img.rect.width/2,y:mousePos.y-img.rect.height/2},0)
+        .to(img.el,{duration:.4,ease:'power3',opacity:0,scale:.2},.4);
+    }
+    addEventListener('resize',()=>{imgs.forEach(i=>{i.rect=i.el.getBoundingClientRect();});});
+  }
+
+  // WORKFLOW：pin 住，节点随滚动逐个出现，连线逐条画出，整条链条横向左移
+  const wfSec=document.getElementById('workflow');
+  if(wfSec&&window.gsap&&window.ScrollTrigger){
+    gsap.registerPlugin(ScrollTrigger);
+    const wfCanvas=wfSec.querySelector('.wf-canvas');
+    const wfViewport=wfSec.querySelector('.wf-viewport');
+    const wfNodes=wfSec.querySelectorAll('.wf-node');
+    const wfLines=wfSec.querySelectorAll('.wf-line');
+    const wfLast=wfSec.querySelector('.wf-n7');
+    const wfTl=gsap.timeline({
+      scrollTrigger:{trigger:wfSec,start:'top 57px',end:'+=2400',scrub:1,pin:true,anticipatePin:1,pinSpacing:true}
+    });
+    // 节点逐个从左侧滑入
+    wfTl.fromTo(wfNodes,{x:-70,opacity:0},{x:0,opacity:1,duration:.42,stagger:.16,ease:'power2.out'},.08);
+    // 连线逐条画出
+    wfTl.fromTo(wfLines,{scaleX:0,opacity:0},{scaleX:1,opacity:.85,duration:.34,stagger:.13,ease:'power1.out'},.28);
+    // 整条链条横向左移，露出第 7 个节点后停止
+    function wfEndX(){
+      const vpW=wfViewport.getBoundingClientRect().width;
+      const canvasLeft=parseFloat(getComputedStyle(wfCanvas).left)||0;
+      const lastRight=canvasLeft+wfLast.offsetLeft+wfLast.offsetWidth;
+      return -Math.max(0,lastRight-vpW+24);
+    }
+    wfTl.to(wfCanvas,{x:wfEndX,duration:1.4,ease:'power1.inOut'},.6);
+  }
+
+  // Agent：Three.js 玻璃质感小球（内部气体云 + 眼睛跟随鼠标 + 眨眼）
+  const orbStage=document.getElementById('orbStage');
+  const orbCanvas=document.getElementById('orbCanvas');
+  const orbEyes=document.getElementById('orbEyes');
+  if(orbStage&&orbCanvas&&orbEyes&&window.THREE){
+    const renderer=new THREE.WebGLRenderer({canvas:orbCanvas,alpha:true,antialias:true});
+    renderer.setPixelRatio(Math.min(devicePixelRatio,2));
+    const scene=new THREE.Scene();
+    const camera=new THREE.PerspectiveCamera(34,1,.1,20);
+    camera.position.z=4.2;
+    const uniforms={uTime:{value:0},uLook:{value:new THREE.Vector2(0,0)}};
+    const sphere=new THREE.Mesh(
+      new THREE.SphereGeometry(0.78,64,64),
+      new THREE.ShaderMaterial({
+        transparent:true,uniforms,depthWrite:false,
+        vertexShader:'varying vec2 vUv;varying vec3 vNormal;varying vec3 vPos;void main(){vUv=uv;vNormal=normalize(normalMatrix*normal);vPos=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
+        fragmentShader:'precision highp float;uniform float uTime;uniform vec2 uLook;varying vec2 vUv;varying vec3 vNormal;varying vec3 vPos;float hash(vec3 p){return fract(sin(dot(p,vec3(127.1,311.7,74.7)))*43758.5453);}float noise(vec3 p){vec3 i=floor(p),f=fract(p);f=f*f*(3.0-2.0*f);float n000=hash(i),n100=hash(i+vec3(1,0,0)),n010=hash(i+vec3(0,1,0)),n110=hash(i+vec3(1,1,0));float n001=hash(i+vec3(0,0,1)),n101=hash(i+vec3(1,0,1)),n011=hash(i+vec3(0,1,1)),n111=hash(i+vec3(1,1,1));float nx00=mix(n000,n100,f.x),nx10=mix(n010,n110,f.x),nx01=mix(n001,n101,f.x),nx11=mix(n011,n111,f.x);return mix(mix(nx00,nx10,f.y),mix(nx01,nx11,f.y),f.z);}float fbm(vec3 p){float v=0.,a=.5;for(int i=0;i<3;i++){v+=a*noise(p);p=p*1.86+vec3(8.3,5.1,3.7);a*=.5;}return v;}void main(){float t=uTime;vec3 p=normalize(vPos);vec3 q=p+vec3(uLook*.06,0.0);q+=.12*vec3(sin(t*.18+p.y*2.3),cos(t*.16+p.z*2.1),sin(t*.14+p.x*2.7));float n1=fbm(q*1.55+vec3(t*.10,-t*.08,t*.06));float n2=fbm(q*2.35+vec3(-t*.07,t*.11,-t*.05));float cloud=smoothstep(.18,.95,n1*.68+n2*.38);cloud*=smoothstep(.95,.16,length(vPos));vec3 base=vec3(.62,.90,1.0);vec3 col=mix(vec3(.96,.98,1.0),base,cloud*.68);col*=.68+cloud*.28;float breath=.86+.14*sin(t*1.85);float alpha=(.38+cloud*.48)*smoothstep(1.0,.18,length(vPos))*breath;gl_FragColor=vec4(col,alpha);}'
+      })
+    );
+    scene.add(sphere);
+    const glass=new THREE.Mesh(
+      new THREE.SphereGeometry(1.205,128,128),
+      new THREE.ShaderMaterial({
+        transparent:true,depthWrite:false,side:THREE.DoubleSide,uniforms,
+        vertexShader:'varying vec2 vUv;varying vec3 vNormal;void main(){vUv=uv;vNormal=normalize(normalMatrix*normal);gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.0);}',
+        fragmentShader:'precision highp float;uniform float uTime;uniform vec2 uLook;varying vec2 vUv;varying vec3 vNormal;void main(){float fres=pow(1.0-abs(vNormal.z),1.65);float glint=pow(max(dot(normalize(vNormal),normalize(vec3(-.42,.72,.55))),0.0),64.0);vec3 col=vec3(1.0)*fres*.92+vec3(1.0)*glint*.48;float alpha=fres*.56+glint*.32;gl_FragColor=vec4(col,alpha);}'
+      })
+    );
+    scene.add(glass);
+    function sizeOrb(){const s=Math.min(orbStage.clientWidth,orbStage.clientHeight,380);renderer.setSize(s,s,false);camera.aspect=1;camera.updateProjectionMatrix();}
+    sizeOrb();addEventListener('resize',sizeOrb);
+    let targetX=0,targetY=0,eyeX=0,eyeY=0;
+    addEventListener('mousemove',e=>{const r=orbStage.getBoundingClientRect();const cx=r.left+r.width/2,cy=r.top+r.height/2;const dx=e.clientX-cx,dy=e.clientY-cy;const len=Math.hypot(dx,dy)||1;const st=Math.min(1,len/300);targetX=dx/len*52*st;targetY=dy/len*40*st;});
+    const clock=new THREE.Clock();let orbVis=false,orbRun=false;
+    function renderOrb(){
+      if(!orbVis){orbRun=false;return;}
+      const t=clock.getElapsedTime();
+      eyeX+=(targetX-eyeX)*.14;eyeY+=(targetY-eyeY)*.14;
+      orbStage.style.setProperty('--eye-x',eyeX.toFixed(2)+'px');
+      orbStage.style.setProperty('--eye-y',eyeY.toFixed(2)+'px');
+      uniforms.uTime.value=t;uniforms.uLook.value.set(eyeX/52,eyeY/40);
+      sphere.rotation.y=t*.18+eyeX*.004;sphere.rotation.x=eyeY*.003;glass.rotation.y=-t*.08;
+      renderer.render(scene,camera);requestAnimationFrame(renderOrb);
+    }
+    function startOrb(){if(orbRun)return;orbRun=true;renderOrb();}
+    if('IntersectionObserver' in window){new IntersectionObserver(es=>{orbVis=es[0].isIntersecting;if(orbVis)startOrb();},{threshold:.08}).observe(orbStage);}
+    else{orbVis=true;startOrb();}
+    function scheduleBlink(){const d=700+Math.random()*1600;setTimeout(()=>{orbEyes.classList.add('blink');setTimeout(()=>orbEyes.classList.remove('blink'),120);scheduleBlink();},d);}
+    scheduleBlink();
+  }
+
+  // Agent 聊天气泡：随滚动逐条显示，最多 3 条并整体与小球居中
+  const agentChat=document.getElementById('agentChat');
+  const agentSecEl=document.getElementById('agent');
+  if(agentChat&&agentSecEl&&window.gsap&&window.ScrollTrigger){
+    const bubbles=[...agentChat.querySelectorAll('.chat-bubble')];
+    const VISIBLE=3,ROW=82;
+    ScrollTrigger.create({
+      trigger:agentSecEl,start:'top top',end:'+=1800',scrub:1,pin:true,anticipatePin:1,
+      onUpdate:self=>{
+        const head=self.progress*(bubbles.length+VISIBLE-2);
+        bubbles.forEach((b,i)=>{
+          const slot=head-i;let op=0;
+          if(slot>=-0.5&&slot<VISIBLE-0.5){const inF=Math.min(1,(slot+0.5)*1.6);const outF=Math.min(1,(VISIBLE-0.5-slot)*1.6);op=Math.max(0,Math.min(inF,outF));}
+          const y=((VISIBLE-1)/2-slot)*ROW;
+          gsap.set(b,{y:y,opacity:op,scale:.9+op*.1});
+        });
+      }
+    });
+  }
+
+  // 滚动进场
+  if('IntersectionObserver' in window){
+    const io=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){e.target.classList.add('in');io.unobserve(e.target);}});},{threshold:.14});
+    document.querySelectorAll('.reveal').forEach(el=>io.observe(el));
+  }else{
+    document.querySelectorAll('.reveal').forEach(el=>el.classList.add('in'));
+  }
+
+  // Hero 轮播圆点
+  const dots=[...document.querySelectorAll('.hero-dots i')];
+  if(dots.length){let di=0;setInterval(()=>{dots.forEach(d=>d.classList.remove('on'));di=(di+1)%dots.length;dots[di].classList.add('on');},2600);}
+
+  // 导航高亮
+  const navLinks=[...document.querySelectorAll('nav.main a')];
+  const secs=navLinks.map(a=>document.querySelector(a.getAttribute('href'))).filter(Boolean);
+  if('IntersectionObserver' in window&&secs.length){
+    const so=new IntersectionObserver(es=>{es.forEach(e=>{if(e.isIntersecting){const id='#'+e.target.id;navLinks.forEach(a=>a.classList.toggle('active',a.getAttribute('href')===id));}});},{rootMargin:'-45% 0px -50% 0px'});
+    secs.forEach(s=>so.observe(s));
+  }
+
+  // Game Asset Generation：自动轮播翻正 + 鼠标悬停打断 + 推动右侧卡片
+  const genFlow=document.getElementById('genFlow');
+  if(genFlow){
+    const cards=[...genFlow.querySelectorAll('.gen-card')];
+    const INTERVAL=1600;          // 自动轮播间隔（ms）
+    let current=0;                // 当前翻正的卡片索引
+    let autoTimer=null;           // 自动轮播定时器
+    let hovering=false;           // 是否鼠标悬停中
+    let secVisible=false;         // 第四屏是否可见
+
+    // 动态设置卡片 margin：让 6 张卡总宽 = 可用宽度，保证一屏可见
+    function updateMargin(){
+      const cardW=cards[0].offsetWidth||480;
+      // gen-flow 自身的内容可用宽度（视口宽 - 左 padding - 右侧留白）
+      const padLeft=parseFloat(getComputedStyle(genFlow).paddingLeft)||0;
+      const availW=window.innerWidth - padLeft*2;
+      // 6 张卡 + 5 个 margin，求 margin（第一张 margin-left:0，只有第 2~6 张有负 margin）
+      const ml=(availW - 6*cardW)/5;
+      cards.forEach((c,i)=>{c.style.marginLeft=(i===0)?'0':ml+'px';});
+    }
+    updateMargin();
+    addEventListener('resize',updateMargin);
+
+    // 动态计算推动量：卡片宽度 - 相邻卡片可见重叠部分的偏移
+    function getPush(){
+      const w=cards[0].offsetWidth||560;
+      const ml=parseFloat(getComputedStyle(cards[0]).marginLeft)||-160;
+      // 翻正后需要推开右侧，露出完整图片
+      return Math.max(160, w + ml - 40);
+    }
+
+    // 翻正指定卡片，其余恢复倾斜，并推动右侧卡片
+    function setActive(idx){
+      cards.forEach((c,i)=>{
+        c.classList.toggle('active',i===idx);
+      });
+      current=idx;
+      pushRight(idx);
+    }
+    // 推动右侧卡片
+    function pushRight(idx){
+      const push=getPush();
+      cards.forEach((c,i)=>{
+        c.style.transform=(i>idx)?'translateX('+push+'px)':'';
+      });
+    }
+    // 自动轮播：翻正下一张，循环
+    function autoNext(){
+      if(hovering||!secVisible||genFlow._narrative)return;
+      setActive((current+1)%cards.length);
+    }
+    function startAuto(){if(!autoTimer){autoTimer=setInterval(autoNext,INTERVAL);}}
+    function stopAuto(){if(autoTimer){clearInterval(autoTimer);autoTimer=null;}}
+
+    // 暴露给叙事动画：进入/退出叙事模式
+    genFlow._narrative=false;
+    genFlow._enterNarrative=function(){
+      genFlow._narrative=true;
+      stopAuto();
+      hovering=false;
+      // 清除所有卡片的 active 和推动 transform，交给叙事动画接管
+      cards.forEach(c=>{c.classList.remove('active');c.style.transform='';});
+    };
+    genFlow._exitNarrative=function(){
+      genFlow._narrative=false;
+      // 彻底清除叙事设的 inline transform（卡片和图片），否则 inline 会覆盖 active class 的翻正
+      cards.forEach(c=>{
+        gsap.set(c,{clearProps:'transform,zIndex'});
+        const img=c.querySelector('.gen-img');
+        if(img)gsap.set(img,{clearProps:'transform'});
+      });
+      current=0;
+      if(secVisible){setActive(0);startAuto();}
+    };
+
+    // 鼠标悬停：打断自动轮播，翻正悬停的卡片并推动右侧
+    cards.forEach(card=>{
+      card.addEventListener('mouseenter',()=>{
+        if(genFlow._narrative)return;
+        hovering=true;
+        stopAuto();
+        const idx=parseInt(card.dataset.idx);
+        setActive(idx);
+        pushRight(idx);
+      });
+    });
+    // 鼠标离开整个流：恢复自动轮播
+    genFlow.addEventListener('mouseleave',()=>{
+      if(genFlow._narrative)return;
+      hovering=false;
+      startAuto();
+    });
+
+    // 进入第四屏时启动自动轮播，离开时停止
+    if('IntersectionObserver' in window){
+      new IntersectionObserver(es=>{
+        secVisible=es[0].isIntersecting;
+        if(secVisible){setActive(0);startAuto();}
+        else{stopAuto();cards.forEach(c=>c.classList.remove('active'));}
+      },{threshold:.2}).observe(genFlow);
+    }else{
+      secVisible=true;setActive(0);startAuto();
+    }
+  }
+
+  // 合并单屏叙事：Cover Flow → 6图翻正收拢移到V1.0位置 → 标题切换 → V2.0/V3.0依次出现
+  const genSec=document.getElementById('generation');
+  const genHead=document.getElementById('genHead');
+  const ledgerHead=document.getElementById('ledgerHead');
+  const genLedger=document.getElementById('genLedger');
+  const glV1=document.getElementById('glV1');
+  const glV1Label=document.getElementById('glV1Label');
+  const glV2=document.getElementById('glV2');
+  const glV3=document.getElementById('glV3');
+  const glA1=document.getElementById('glA1');
+  const glA2=document.getElementById('glA2');
+  if(genSec&&genFlow&&genLedger&&window.gsap&&window.ScrollTrigger){
+    const genCards=[...genFlow.querySelectorAll('.gen-card')];
+    const genImgs=[...genFlow.querySelectorAll('.gen-img')];
+    const STACK_GAP=8;
+    const clamp=v=>Math.max(0,Math.min(1,v));
+
+    // 初始隐藏 V2/V3、箭头、V1标签、第二套标题
+    gsap.set([glV2,glV3],{opacity:0,scale:.6});
+    gsap.set([glA1,glA2,glV1Label,ledgerHead],{opacity:0});
+
+    let lastP=0;  // 记录上一帧 progress，用于识别 pin 切换的假跳变
+    ScrollTrigger.create({
+      trigger:genSec,start:'top 57px',end:'+=2800',scrub:1,pin:true,anticipatePin:1,pinSpacing:true,
+      onLeaveBack:()=>{
+        // 回滚离开叙事：重置叙事 UI，由 _exitNarrative 统一清除卡片/图片变换并恢复 Cover Flow
+        gsap.set(genHead,{opacity:1});
+        gsap.set([glV2,glV3],{opacity:0,scale:.6});
+        gsap.set([glA1,glA2,glV1Label,ledgerHead],{opacity:0});
+        genFlow._exitNarrative&&genFlow._exitNarrative();
+        lastP=0;
+      },
+      onUpdate:self=>{
+        const p=self.progress;
+        // 叙事未开始（p 很小）：不干预卡片，V1 保持当前状态
+        // _exitNarrative（恢复 Cover Flow 展开）只由 onLeaveBack 触发，避免回滚时 progress 跳变导致 V1 展开
+        if(p<=0.02){
+          lastP=p;
+          return;
+        }
+        lastP=p;
+        // 进入叙事模式（仅在切换时调用一次）
+        if(!genFlow._narrative){genFlow._enterNarrative&&genFlow._enterNarrative();}
+
+        const cp=clamp(p/0.42);           // 0~42%：翻正收拢 + 移到 V1.0 位置
+        const lp=clamp((p-0.35)/0.15);    // 35~50%：标题切换 + V1.0 标签
+        const v2p=clamp((p-0.42)/0.18);   // 42~60%：V2.0 出现
+        const v3p=clamp((p-0.62)/0.18);   // 62~80%：V3.0 出现（80%~100% 为稳定平台，避免与相邻屏交界跳变导致突然消失）
+
+        // 收拢目标：精确对齐到 gl-slot（V1.0 停靠位），与 V2/V3 图片堆垂直对齐
+        const gfRect=genFlow.getBoundingClientRect();
+        const slot=glV1.getBoundingClientRect();
+        const SHRINK=0.28;      // 收拢缩小幅度（480→约346，与 gl-slot 等大）
+        const GAP2=6;           // 堆叠偏移，与 imgstack 的 translate(6i) 一致
+        const slotCX=slot.left+slot.width/2, slotCY=slot.top+slot.height/2;
+        genCards.forEach((card,i)=>{
+          gsap.set(genImgs[i],{rotateY:55*(1-cp),scale:1});
+          const baseCX=gfRect.left+card.offsetLeft+card.offsetWidth/2;
+          const baseCY=gfRect.top+gfRect.height/2;
+          const dx=(slotCX+i*GAP2)-baseCX;
+          const dy=(slotCY+i*GAP2)-baseCY;
+          gsap.set(card,{x:dx*cp,y:dy*cp,scale:1-cp*SHRINK,zIndex:1000+i});
+        });
+
+        // 标题切换
+        gsap.set(genHead,{opacity:1-lp});
+        gsap.set(ledgerHead,{opacity:lp});
+        gsap.set(glV1Label,{opacity:lp});
+        // V2.0、V3.0 依次出现
+        gsap.set(glV2,{opacity:v2p,scale:.6+.4*v2p});
+        gsap.set(glA1,{opacity:v2p});
+        gsap.set(glV3,{opacity:v3p,scale:.6+.4*v3p});
+        gsap.set(glA2,{opacity:v3p});
+      }
+    });
+  }
+
+  // Security 屏：滚动时中心保险箱缩小，四周浮现 4 个卫星保险箱（断开连线 + 红 ✕）
+  const secSec=document.getElementById('security');
+  const safeCenter=document.getElementById('safeCenter');
+  if(secSec&&safeCenter&&window.gsap&&window.ScrollTrigger){
+    const sats=[...secSec.querySelectorAll('.s-sat')];
+    const links=[...secSec.querySelectorAll('.s-link')];
+    const xs=[...secSec.querySelectorAll('.s-x')];
+    const pts=[...secSec.querySelectorAll('.sec-points .pt')];
+    const D=170;
+    const dirs={'s-sup':[0,-D],'s-sdown':[0,D],'s-sleft':[-D,0],'s-sright':[D,0]};
+    // 初始：中心放大成大保险箱，卫星在更外侧且隐藏，连线/✕/要点 隐藏
+    gsap.set(safeCenter,{scale:3.4});
+    sats.forEach(s=>{
+      const cls=[...s.classList].find(c=>dirs[c]);
+      const [dx,dy]=dirs[cls];
+      gsap.set(s,{xPercent:-50,yPercent:-50,x:dx*1.8,y:dy*1.8,scale:1,opacity:0});
+    });
+    gsap.set([...links,...xs],{opacity:0});
+    gsap.set(pts,{opacity:0,x:30});
+
+    const tl=gsap.timeline({scrollTrigger:{trigger:secSec,start:'top 57px',end:'+=1600',scrub:1,pin:true,anticipatePin:1,
+      onUpdate:(self)=>{
+        // 向上回滚时不反向播放，强制保持最终态
+        if(self.direction===-1){ tl.progress(1); }
+      },
+      onLeaveBack:()=>{
+        gsap.set(safeCenter,{scale:1});
+        sats.forEach(s=>{
+          const cls=[...s.classList].find(c=>dirs[c]);
+          const [dx,dy]=dirs[cls];
+          gsap.set(s,{x:dx,y:dy,opacity:1});
+        });
+        gsap.set(links,{opacity:1});
+        gsap.set(xs,{opacity:1});
+        gsap.set(pts,{opacity:1,x:0});
+      }
+    }});
+    // 中心缩小
+    tl.to(safeCenter,{scale:1,ease:'power2.out',duration:.4},0);
+    // 4 个卫星从外侧向内滑入并显现
+    sats.forEach(s=>{
+      const cls=[...s.classList].find(c=>dirs[c]);
+      const [dx,dy]=dirs[cls];
+      tl.to(s,{x:dx,y:dy,opacity:1,ease:'power2.out',duration:.4},0);
+    });
+    // 断开的连线淡入
+    tl.to(links,{opacity:1,duration:.22},.3);
+    // 中点红色 ✕ 淡入（紧随连线出现）
+    tl.to(xs,{opacity:1,duration:.22},.38);
+    // 右侧三条要点逐条出现（较早开始，与保险箱扩散几乎同步）
+    tl.to(pts,{opacity:1,x:0,ease:'power2.out',duration:.28,stagger:.16},.15);
+  }
+})();
+</script>
+</body>
+</html>
